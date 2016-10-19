@@ -34,7 +34,7 @@ class SRLLSTM:
         self.headFlag = options.headFlag
         self.rlMostFlag = options.rlMostFlag
         self.rlFlag = options.rlFlag
-        self.k = 6
+        self.k = 8
         self.nnvecs = 2
 
         self.external_embedding = None
@@ -142,11 +142,14 @@ class SRLLSTM:
         arg_head_vec = [sentence.entries[arg_head].lstms if arg_head >= 0 else [self.empty]]
         left_word_vec = [sentence.entries[arg_index-1].lstms if arg_index>1 else [self.empty]]
         right_word_vec = [sentence.entries[arg_index+1].lstms if arg_index+1<len(sentence) else [self.empty]]
+        left_right_sibling = sentence.left_right_siblings(arg_index)
+        left_sib_vec = [sentence.entries[left_right_sibling[0]].lstms if left_right_sibling[0]>=0 else [self.empty]]
+        right_sib_vec = [sentence.entries[left_right_sibling[1]].lstms if left_right_sibling[1] >= 0 else [self.empty]]
         position = 0 if arg_index==pred_index else 1 if arg_index>pred_index else 2
         positionVec = lookup(self.positionEmbeddings, position)
 
         concatenate([positionVec, concatenate(
-            list(chain(*(pred_vec + arg_vec + pred_head_vec + arg_head_vec + left_word_vec + right_word_vec))))])
+            list(chain(*(pred_vec + arg_vec + pred_head_vec + arg_head_vec + left_word_vec + right_word_vec+left_sib_vec+right_sib_vec))))])
         if self.hidden2_units > 0:
             routput = (self.routLayer * self.activation(self.rhid2Bias + self.rhid2Layer * self.activation(
                 self.rhidLayer * input + self.rhidBias)) + self.routBias)

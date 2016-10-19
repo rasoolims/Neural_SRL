@@ -1,13 +1,23 @@
-from collections import Counter
+from collections import Counter,defaultdict
 import re, codecs
 
 class ConllStruct:
     def __init__(self, entries, predicates):
         self.entries = entries
+        self.rev_heads = defaultdict(list)
+        for entry in entries:
+            self.rev_heads[entry.parent_id].append(entry.id)
         self.predicates = predicates
 
     def head(self, dep):
         return self.entries[dep].parent_id
+
+    def left_right_siblings(self, i):
+        l = self.rev_heads[self.entries[i].parent_id]
+        f = l.index(i)
+        left = -1 if f<=0 else l[f-1]
+        right = -1 if f>=len(l)-1 else l[f+1]
+        return (left,right)
 
     def __len__(self):
         return len(self.entries)
