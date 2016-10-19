@@ -144,9 +144,9 @@ class SRLLSTM:
         right_word_vec = [sentence.entries[arg_index+1].lstms if arg_index+1<len(sentence) else [self.empty]]
         position = 0 if arg_index==pred_index else 1 if arg_index>pred_index else 2
         positionVec = lookup(self.positionEmbeddings, position)
-        print type(positionVec),type(pred_vec ),type( arg_vec ),type( pred_head_vec ),type( arg_head_vec),type(left_word_vec),type(right_word_vec)
-        input = concatenate([positionVec,pred_vec , arg_vec , pred_head_vec , arg_head_vec,left_word_vec,right_word_vec])
 
+        concatenate([positionVec, concatenate(
+            list(chain(*(pred_vec + arg_vec + pred_head_vec + arg_head_vec + left_word_vec + right_word_vec))))])
         if self.hidden2_units > 0:
             routput = (self.routLayer * self.activation(self.rhid2Bias + self.rhid2Layer * self.activation(
                 self.rhidLayer * input + self.rhidBias)) + self.routBias)
