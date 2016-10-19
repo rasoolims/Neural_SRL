@@ -142,9 +142,9 @@ class SRLLSTM:
         arg_head_vec = [sentence.entries[arg_head].lstms if arg_head >= 0 else [self.empty]]
         left_word_vec = [sentence.entries[arg_index-1].lstms if arg_index>1 else [self.empty]]
         right_word_vec = [sentence.entries[arg_index+1].lstms if arg_index+1<len(sentence) else [self.empty]]
-        left_right_sibling = sentence.left_right_siblings(arg_index)
-        left_sib_vec = [sentence.entries[left_right_sibling[0]].lstms if left_right_sibling[0]>=0 else [self.empty]]
-        right_sib_vec = [sentence.entries[left_right_sibling[1]].lstms if left_right_sibling[1] >= 0 else [self.empty]]
+        (left_sibling,right_sibling) = sentence.left_right_siblings(arg_index)
+        left_sib_vec = [sentence.entries[left_sibling].lstms if left_sibling>=0 else [self.empty]]
+        right_sib_vec = [sentence.entries[right_sibling].lstms if right_sibling>= 0 else [self.empty]]
         position = 0 if arg_index==pred_index else 1 if arg_index>pred_index else 2
         positionVec = lookup(self.positionEmbeddings, position)
 
