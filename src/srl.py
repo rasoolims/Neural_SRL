@@ -263,7 +263,7 @@ class SRLLSTM:
                 pred_dep_set = sentence.get_dep_set(predicate)
                 subcat_vec = []
                 for dep in self.deprels.keys():
-                    subcat_vec.extend([sentence.entries[pred_dep_set[dep]].lstms]) if pred_dep_set.has_key(dep) else [self.empty]
+                    subcat_vec.extend([sentence.entries[pred_dep_set[dep]].lstms]) if pred_dep_set.has_key(dep) else subcat_vec.extend([self.empty])
                 for arg in range(1, len(sentence.entries)):
                     scores = self.__evaluate(sentence, predicate, arg,subcat_vec)
                     sentence.entries[arg].predicateList[p] = max(chain(*scores), key=itemgetter(2))[0]
@@ -303,7 +303,6 @@ class SRLLSTM:
                 subcat_vec = []
                 for dep in self.deprels.keys():
                     subcat_vec.extend([sentence.entries[pred_dep_set[dep]].lstms]) if pred_dep_set.has_key(dep) else subcat_vec.extend([self.empty])
-                print subcat_vec
                 for arg in range(1, len(sentence.entries)):
                     scores = self.__evaluate(sentence, predicate, arg,subcat_vec)
                     best = max(chain(*scores), key=itemgetter(2))
