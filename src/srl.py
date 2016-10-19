@@ -34,7 +34,7 @@ class SRLLSTM:
         self.headFlag = options.headFlag
         self.rlMostFlag = options.rlMostFlag
         self.rlFlag = options.rlFlag
-        self.k = 8
+        self.k = 8 + len(depRels)
         self.nnvecs = 2
 
         self.external_embedding = None
@@ -133,7 +133,7 @@ class SRLLSTM:
         self.routLayer = parameter(self.routLayer_)
         self.routBias = parameter(self.routBias_)
 
-    def __evaluate(self, sentence, pred_index, arg_index):
+    def __evaluate(self, sentence, pred_index, arg_index, subcat_vec):
         pred_vec = [sentence.entries[pred_index].lstms]
         arg_vec = [sentence.entries[arg_index].lstms]
         pred_head = sentence.head(pred_index)
@@ -148,8 +148,9 @@ class SRLLSTM:
         position = 0 if arg_index==pred_index else 1 if arg_index>pred_index else 2
         positionVec = lookup(self.positionEmbeddings, position)
 
-        input = concatenate([positionVec, concatenate(
-            list(chain(*(pred_vec + arg_vec + pred_head_vec + arg_head_vec + left_word_vec + right_word_vec+left_sib_vec+right_sib_vec))))])
+        feat_vecs = pred_vec + arg_vec + pred_head_vec + arg_head_vec + left_word_vec + right_word_vec+left_sib_vec+right_sib_vec
+        [feat_vecs.append(v) for v in subcat_vec]
+        input = concatenate([positionVec, concatenate(list(chain(*(feat_vecs))))])
         if self.hidden2_units > 0:
             routput = (self.routLayer * self.activation(self.rhid2Bias + self.rhid2Layer * self.activation(
                 self.rhidLayer * input + self.rhidBias)) + self.routBias)
@@ -260,8 +261,12 @@ class SRLLSTM:
                 root.lstms = [root.vec for _ in xrange(self.nnvecs)]
             for p in range(len(sentence.predicates)):
                 predicate = sentence.predicates[p]
+                pred_dep_set = sentence.get_dep_set(predicate)
+                subcat_vec = []
+                for dep in self.deprels:
+                    subcat_vec.append([sentence.entries[pred_dep_set[dep]].lstms]) if pred_dep_set.has_key(dep) else [self.empty]
                 for arg in range(1, len(sentence.entries)):
-                    scores = self.__evaluate(sentence, predicate, arg)
+                    scores = self.__evaluate(sentence, predicate, arg,subcat_vec)
                     sentence.entries[arg].predicateList[p] = max(chain(*scores), key=itemgetter(2))[0]
             renew_cg()
             yield  sentence
@@ -295,8 +300,12 @@ class SRLLSTM:
                 root.lstms = [root.vec for _ in xrange(self.nnvecs)]
             for p in range(1, len(sentence.predicates)):
                 predicate = sentence.predicates[p]
+                pred_dep_set = sentence.get_dep_set(predicate)
+                subcat_vec = []
+                for dep in self.deprels:
+                    subcat_vec.append([sentence.entries[pred_dep_set[dep]].lstms]) if pred_dep_set.has_key(dep) else [self.empty]
                 for arg in range(1, len(sentence.entries)):
-                    scores = self.__evaluate(sentence, predicate, arg)
+                    scores = self.__evaluate(sentence, predicate, arg,subcat_vec)
                     best = max(chain(*scores), key=itemgetter(2))
                     gold = sentence.entries[arg].predicateList[p]
                     predicted = best[0]

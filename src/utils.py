@@ -19,6 +19,9 @@ class ConllStruct:
         right = -1 if f>=len(l)-1 else l[f+1]
         return (left,right)
 
+    def get_dep_set(self, h):
+        return {self.entries[dep].relation:dep for dep in self.rev_heads[h]}
+
     def __len__(self):
         return len(self.entries)
 
