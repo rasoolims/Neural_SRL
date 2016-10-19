@@ -221,7 +221,6 @@ class SRLLSTM:
             root.wordvec = lookup(self.wordEmbeddings, int(self.vocab.get(root.norm, 0)) if dropFlag else 0)
             root.lemmaVec = lookup(self.lemmaEmbeddings, int(self.lemmas.get(root.lemmaNorm, 0)) if dropFlag else 0)
             root.posvec = lookup(self.posEmbedding, int(self.pos[root.pos])) if self.pdims > 0 else None
-            root.depvec = lookup(self.depRelEmbedding, int(self.deprels[root.relation])) if self.pdims>0 and root.pos != 'ROOT' else None
 
             if self.external_embedding is not None:
                 if not dropFlag and random.random() < 0.5:
@@ -275,8 +274,11 @@ class SRLLSTM:
             print froot,rroot
             fword = sentence.entries[froot]
             rword = sentence.entries[rroot]
-            forward = forward.add_input(concatenate([fword.depvec, concatenate(list(chain(*(fword.lstms))))]))
-            backward = backward.add_input(concatenate([rword.depvec, concatenate(list(chain(*(rword.lstms))))]))
+            fdepvec = lookup(self.depRelEmbedding, int(self.deprels[fword.relation])) if self.deprdims>0 else None
+            bdepvec = lookup(self.depRelEmbedding, int(self.deprels[rword.relation])) if self.deprdims>0 else None
+            print fdepvec, bdepvec
+            forward = forward.add_input(concatenate([fdepvec, concatenate(list(chain(*(fword.lstms))))]))
+            backward = backward.add_input(concatenate([bdepvec, concatenate(list(chain(*(rword.lstms))))]))
             fvecs.append(forward.output())
             bvecs.append(backward.output())
 
