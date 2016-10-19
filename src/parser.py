@@ -58,7 +58,7 @@ if __name__ == '__main__':
         print 'Finished collecting vocab'
 
 
-        print 'Initializing blstm arc hybrid:'
+        print 'Initializing blstm srl:'
         parser = SRLLSTM(words, lemmas, pos, rels, semRels, w2i, l2i, options)
 
         for epoch in xrange(options.epochs):
