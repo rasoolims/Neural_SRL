@@ -85,18 +85,20 @@ class SRLLSTM:
         self.lemmas['*INITIAL*'] = 2
         self.deprels['*INITIAL*'] = 2
 
+        self.positionDim = 2
         self.wordEmbeddings = self.model.add_lookup_parameters((len(words) + 3, self.wdims))
         self.lemmaEmbeddings = self.model.add_lookup_parameters((len(lemmas) + 3, self.lemDims))
         self.posEmbedding = self.model.add_lookup_parameters((len(pos) + 3, self.pdims))
         self.depRelEmbedding = self.model.add_lookup_parameters((len(depRels), self.deprdims))
         self.semRelEmbedding = self.model.add_lookup_parameters((len(rels), self.rdims))
+        self.positionEmbeddings = self.model.add_lookup_parameters((3, self.positionDim)) # for showing the actual position
 
         self.word2lstm_ = self.model.add_parameters((self.ldims, self.wdims + self.lemDims + self.pdims + (self.edim if self.external_embedding is not None else 0)))
         self.word2lstmbias_ = self.model.add_parameters((self.ldims))
         self.lstm2lstm_ = self.model.add_parameters((self.ldims, self.ldims * self.nnvecs + self.rdims))
         self.lstm2lstmbias_ = self.model.add_parameters((self.ldims))
 
-        self.hidLayer_ = self.model.add_parameters((self.hidden_units, self.ldims * self.nnvecs * self.k))
+        self.hidLayer_ = self.model.add_parameters((self.hidden_units, self.ldims * self.nnvecs * self.k + self.positionDim))
         self.hidBias_ = self.model.add_parameters((self.hidden_units))
 
         self.hid2Layer_ = self.model.add_parameters((self.hidden2_units, self.hidden_units))
@@ -105,7 +107,7 @@ class SRLLSTM:
         self.outLayer_ = self.model.add_parameters((2, self.hidden2_units if self.hidden2_units > 0 else self.hidden_units))
         self.outBias_ = self.model.add_parameters((2))
 
-        self.rhidLayer_ = self.model.add_parameters((self.hidden_units, self.ldims * self.nnvecs * self.k))
+        self.rhidLayer_ = self.model.add_parameters((self.hidden_units, self.ldims * self.nnvecs * self.k + self.positionDim))
         self.rhidBias_  = self.model.add_parameters((self.hidden_units))
 
         self.rhid2Layer_ = self.model.add_parameters((self.hidden2_units, self.hidden_units))
@@ -140,8 +142,10 @@ class SRLLSTM:
         arg_head_vec = [sentence.entries[arg_head].lstms if arg_head >= 0 else [self.empty]]
         left_word_vec = [sentence.entries[arg_index-1].lstms if arg_index>1 else [self.empty]]
         right_word_vec = [sentence.entries[arg_index+1].lstms if arg_index+1<len(sentence) else [self.empty]]
+        position = 0 if arg_index==pred_index else 1 if arg_index>pred_index else 2
+        positionVec = lookup(self.positionEmbeddings, position)
 
-        input = concatenate(list(chain(*(pred_vec + arg_vec + pred_head_vec + arg_head_vec+left_word_vec+right_word_vec))))
+        input = concatenate(list(chain(*(pred_vec + arg_vec + pred_head_vec + arg_head_vec+left_word_vec+right_word_vec+positionVec))))
 
         if self.hidden2_units > 0:
             routput = (self.routLayer * self.activation(self.rhid2Bias + self.rhid2Layer * self.activation(
