@@ -5,6 +5,7 @@ from itertools import chain
 import utils, time, random
 import numpy as np
 
+
 class SRLLSTM:
     def __init__(self, words, lemmas, pos, depRels, rels, w2i, l2i, options):
         self.model = Model()
@@ -91,34 +92,40 @@ class SRLLSTM:
         self.posEmbedding = self.model.add_lookup_parameters((len(pos) + 3, self.pdims))
         self.depRelEmbedding = self.model.add_lookup_parameters((len(depRels), self.deprdims))
         self.semRelEmbedding = self.model.add_lookup_parameters((len(rels), self.rdims))
-        self.positionEmbeddings = self.model.add_lookup_parameters((3, self.positionDim)) # for showing the actual position
+        self.positionEmbeddings = self.model.add_lookup_parameters(
+            (3, self.positionDim))  # for showing the actual position
 
-        self.word2lstm_ = self.model.add_parameters((self.ldims, self.wdims + self.lemDims + self.pdims + (self.edim if self.external_embedding is not None else 0)))
+        self.word2lstm_ = self.model.add_parameters((self.ldims, self.wdims + self.lemDims + self.pdims + (
+        self.edim if self.external_embedding is not None else 0)))
         self.word2lstmbias_ = self.model.add_parameters((self.ldims))
         self.lstm2lstm_ = self.model.add_parameters((self.ldims, self.ldims * self.nnvecs + self.rdims))
         self.lstm2lstmbias_ = self.model.add_parameters((self.ldims))
-        self.hidLayer_ = self.model.add_parameters((self.hidden_units, self.ldims * self.nnvecs * self.k + self.positionDim))
+        self.hidLayer_ = self.model.add_parameters(
+            (self.hidden_units, self.ldims * self.nnvecs * self.k + self.positionDim))
         self.hidBias_ = self.model.add_parameters((self.hidden_units))
 
         self.hid2Layer_ = self.model.add_parameters((self.hidden2_units, self.hidden_units))
         self.hid2Bias_ = self.model.add_parameters((self.hidden2_units))
 
-        self.outLayer_ = self.model.add_parameters((2, self.hidden2_units if self.hidden2_units > 0 else self.hidden_units))
+        self.outLayer_ = self.model.add_parameters(
+            (2, self.hidden2_units if self.hidden2_units > 0 else self.hidden_units))
         self.outBias_ = self.model.add_parameters((2))
 
-        self.rhidLayer_ = self.model.add_parameters((self.hidden_units, self.ldims * self.nnvecs * self.k + self.positionDim))
-        self.rhidBias_  = self.model.add_parameters((self.hidden_units))
+        self.rhidLayer_ = self.model.add_parameters(
+            (self.hidden_units, self.ldims * self.nnvecs * self.k + self.positionDim))
+        self.rhidBias_ = self.model.add_parameters((self.hidden_units))
 
         self.rhid2Layer_ = self.model.add_parameters((self.hidden2_units, self.hidden_units))
         self.rhid2Bias_ = self.model.add_parameters((self.hidden2_units))
 
-        self.routLayer_ =  self.model.add_parameters((2 * (len(self.irels) + 0) + 1, self.hidden2_units if self.hidden2_units > 0 else self.hidden_units))
+        self.routLayer_ = self.model.add_parameters(
+            (2 * (len(self.irels) + 0) + 1, self.hidden2_units if self.hidden2_units > 0 else self.hidden_units))
         self.routBias_ = self.model.add_parameters((2 * (len(self.irels) + 0) + 1))
 
         self.word2lstm = parameter(self.word2lstm_)
         self.word2lstmbias = parameter(self.word2lstmbias_)
-        self.lstm2lstm =  parameter(self.lstm2lstm_)
-        self.lstm2lstmbias =  parameter(self.lstm2lstmbias_)
+        self.lstm2lstm = parameter(self.lstm2lstm_)
+        self.lstm2lstmbias = parameter(self.lstm2lstmbias_)
         self.hidLayer = parameter(self.hidLayer_)
         self.hidBias = parameter(self.hidBias_)
         self.hid2Layer = parameter(self.hid2Layer_)
@@ -136,18 +143,18 @@ class SRLLSTM:
         pred_vec = [sentence.entries[pred_index].lstms]
         arg_vec = [sentence.entries[arg_index].lstms]
         pred_head = sentence.head(pred_index)
-        pred_head_vec = [sentence.entries[pred_head].lstms if pred_head>=0 else [self.empty]]
+        pred_head_vec = [sentence.entries[pred_head].lstms if pred_head >= 0 else [self.empty]]
         arg_head = sentence.head(arg_index)
         arg_head_vec = [sentence.entries[arg_head].lstms if arg_head >= 0 else [self.empty]]
-        left_word_vec = [sentence.entries[arg_index-1].lstms if arg_index>1 else [self.empty]]
-        right_word_vec = [sentence.entries[arg_index+1].lstms if arg_index+1<len(sentence) else [self.empty]]
-        (left_sibling,right_sibling) = sentence.left_right_siblings(arg_index)
-        left_sib_vec = [sentence.entries[left_sibling].lstms if left_sibling>=0 else [self.empty]]
-        right_sib_vec = [sentence.entries[right_sibling].lstms if right_sibling>= 0 else [self.empty]]
-        position = 0 if arg_index==pred_index else 1 if arg_index>pred_index else 2
+        left_word_vec = [sentence.entries[arg_index - 1].lstms if arg_index > 1 else [self.empty]]
+        right_word_vec = [sentence.entries[arg_index + 1].lstms if arg_index + 1 < len(sentence) else [self.empty]]
+        (left_sibling, right_sibling) = sentence.left_right_siblings(arg_index)
+        left_sib_vec = [sentence.entries[left_sibling].lstms if left_sibling >= 0 else [self.empty]]
+        right_sib_vec = [sentence.entries[right_sibling].lstms if right_sibling >= 0 else [self.empty]]
+        position = 0 if arg_index == pred_index else 1 if arg_index > pred_index else 2
         positionVec = lookup(self.positionEmbeddings, position)
 
-        feat_vecs = pred_vec + arg_vec + pred_head_vec + arg_head_vec + left_word_vec + right_word_vec+left_sib_vec+right_sib_vec
+        feat_vecs = pred_vec + arg_vec + pred_head_vec + arg_head_vec + left_word_vec + right_word_vec + left_sib_vec + right_sib_vec
         feat_vecs.extend(subcat_vec)
         input = concatenate([positionVec, concatenate(list(chain(*(feat_vecs))))])
         if self.hidden2_units > 0:
@@ -168,8 +175,8 @@ class SRLLSTM:
         uscrs1 = uscrs[1]
         output0 = output[0]
         output1 = output[1]
-        return  [[(rel, 0, scrs[1 + j * 2] + uscrs1, routput[1 + j * 2] + output1) for j, rel in enumerate(self.irels)],
-                   [('_', 1, scrs[0] + uscrs0, routput[0] + output0)]]
+        return [[(rel, 0, scrs[1 + j * 2] + uscrs1, routput[1 + j * 2] + output1) for j, rel in enumerate(self.irels)],
+                [('_', 1, scrs[0] + uscrs0, routput[0] + output0)]]
 
     def Save(self, filename):
         self.model.save(filename)
@@ -200,7 +207,8 @@ class SRLLSTM:
         paddingLemmaVec = lookup(self.lemmaEmbeddings, 1)
         paddingPosVec = lookup(self.posEmbedding, 1)
         paddingVec = tanh(
-            self.word2lstm * concatenate(filter(None, [paddingWordVec, paddingLemmaVec, paddingPosVec, evec])) + self.word2lstmbias)
+            self.word2lstm * concatenate(
+                filter(None, [paddingWordVec, paddingLemmaVec, paddingPosVec, evec])) + self.word2lstmbias)
         self.empty = paddingVec if self.nnvecs == 1 else concatenate([paddingVec for _ in xrange(self.nnvecs)])
 
     def getWordEmbeddings(self, sentence, train):
@@ -263,12 +271,13 @@ class SRLLSTM:
                 pred_dep_set = sentence.get_dep_set(predicate)
                 subcat_vec = []
                 for dep in self.deprels.keys():
-                    subcat_vec.extend([sentence.entries[pred_dep_set[dep]].lstms]) if pred_dep_set.has_key(dep) else subcat_vec.extend([self.empty])
+                    subcat_vec.extend([sentence.entries[pred_dep_set[dep]].lstms]) if pred_dep_set.has_key(
+                        dep) else subcat_vec.extend([self.empty])
                 for arg in range(1, len(sentence.entries)):
-                    scores = self.__evaluate(sentence, predicate, arg,subcat_vec)
+                    scores = self.__evaluate(sentence, predicate, arg, subcat_vec)
                     sentence.entries[arg].predicateList[p] = max(chain(*scores), key=itemgetter(2))[0]
             renew_cg()
-            yield  sentence
+            yield sentence
 
     def Train(self, conll_path):
         mloss = 0.0
@@ -302,9 +311,10 @@ class SRLLSTM:
                 pred_dep_set = sentence.get_dep_set(predicate)
                 subcat_vec = []
                 for dep in self.deprels.keys():
-                    subcat_vec.extend([sentence.entries[pred_dep_set[dep]].lstms]) if pred_dep_set.has_key(dep) else subcat_vec.extend([self.empty])
+                    subcat_vec.extend([sentence.entries[pred_dep_set[dep]].lstms]) if pred_dep_set.has_key(
+                        dep) else subcat_vec.extend([self.empty])
                 for arg in range(1, len(sentence.entries)):
-                    scores = self.__evaluate(sentence, predicate, arg,subcat_vec)
+                    scores = self.__evaluate(sentence, predicate, arg, subcat_vec)
                     best = max(chain(*scores), key=itemgetter(2))
                     gold = sentence.entries[arg].predicateList[p]
                     predicted = best[0]
@@ -317,13 +327,13 @@ class SRLLSTM:
                             g_s = scores[1][0][2]
                         else:
                             for item in scores[0]:
-                                if item[0]==gold:
+                                if item[0] == gold:
                                     gold_score = item[3]
                                     g_s = item[2]
                                     break
 
-                        if gold != '_' and predicted!='_':
-                            lerrors+=1
+                        if gold != '_' and predicted != '_':
+                            lerrors += 1
                         else:
                             lerrors += 1
                             eerrors += 1
@@ -332,7 +342,7 @@ class SRLLSTM:
                         mloss += 1.0 + best[2] - g_s
                         eloss += 1.0 + best[2] - g_s
                         errs.append(loss)
-                    etotal+= 1
+                    etotal += 1
             if len(errs) > 50:
                 eerrs = esum(errs)
                 scalar_loss = eerrs.scalar_value()
