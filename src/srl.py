@@ -35,7 +35,7 @@ class SRLLSTM:
         self.headFlag = options.headFlag
         self.rlMostFlag = options.rlMostFlag
         self.rlFlag = options.rlFlag
-        self.k = 8 + len(self.deprels)
+        self.k = 9
         self.nnvecs = 2
 
         self.external_embedding = None
@@ -61,6 +61,10 @@ class SRLLSTM:
         self.blstmFlag = options.blstmFlag
         self.bibiFlag = options.bibiFlag
 
+        self.childsetLSTMs = [LSTMBuilder(1, self.ldims + self.deprdims, self.ldims * 0.5, self.model),
+                              LSTMBuilder(1, self.ldims+ self.deprdims, self.ldims * 0.5, self.model)]
+        self.bchildsetLSTMs = [LSTMBuilder(1, self.ldims+ self.deprdims, self.ldims * 0.5, self.model),
+                              LSTMBuilder(1, self.ldims+ self.deprdims, self.ldims * 0.5, self.model)]
         if self.bibiFlag:
             self.surfaceBuilders = [LSTMBuilder(1, dims, self.ldims * 0.5, self.model),
                                     LSTMBuilder(1, dims, self.ldims * 0.5, self.model)]
@@ -139,7 +143,7 @@ class SRLLSTM:
         self.routLayer = parameter(self.routLayer_)
         self.routBias = parameter(self.routBias_)
 
-    def __evaluate(self, sentence, pred_index, arg_index, subcat_vec):
+    def __evaluate(self, sentence, pred_index, arg_index, subcat_lstm):
         pred_vec = [sentence.entries[pred_index].lstms]
         arg_vec = [sentence.entries[arg_index].lstms]
         pred_head = sentence.head(pred_index)
@@ -154,8 +158,7 @@ class SRLLSTM:
         position = 0 if arg_index == pred_index else 1 if arg_index > pred_index else 2
         positionVec = lookup(self.positionEmbeddings, position)
 
-        feat_vecs = pred_vec + arg_vec + pred_head_vec + arg_head_vec + left_word_vec + right_word_vec + left_sib_vec + right_sib_vec
-        feat_vecs.extend(subcat_vec)
+        feat_vecs = subcat_lstm + pred_vec + arg_vec + pred_head_vec + arg_head_vec + left_word_vec + right_word_vec + left_sib_vec + right_sib_vec
         input = concatenate([positionVec, concatenate(list(chain(*(feat_vecs))))])
         if self.hidden2_units > 0:
             routput = (self.routLayer * self.activation(self.rhid2Bias + self.rhid2Layer * self.activation(
@@ -218,6 +221,7 @@ class SRLLSTM:
             root.wordvec = lookup(self.wordEmbeddings, int(self.vocab.get(root.norm, 0)) if dropFlag else 0)
             root.lemmaVec = lookup(self.lemmaEmbeddings, int(self.lemmas.get(root.lemmaNorm, 0)) if dropFlag else 0)
             root.posvec = lookup(self.posEmbedding, int(self.pos[root.pos])) if self.pdims > 0 else None
+            root.depvec = lookup(self.depRelEmbedding, int(self.deprels[root.relation])) if self.pdims>0 and root.pos != 'ROOT' else None
 
             if self.external_embedding is not None:
                 if not dropFlag and random.random() < 0.5:
@@ -260,6 +264,27 @@ class SRLLSTM:
                 root.ivec = (self.word2lstm * root.ivec) + self.word2lstmbias
                 root.vec = tanh(root.ivec)
 
+    def childrenLstms(self, sentence, predicate):
+        forward = self.childsetLSTMs[0].initial_state()
+        backward = self.childsetLSTMs[1].initial_state()
+
+        fvecs = []
+        bvecs = []
+        for froot, rroot in zip(sentence.rev_heads[predicate], reversed(sentence.rev_heads[predicate])):
+            fword = sentence.entries[froot]
+            rword = sentence.entries[rroot]
+            forward = forward.add_input(concatenate([fword.depvec, list(chain*(fword.lstms))]))
+            backward = backward.add_input(concatenate([rword.depvec, list(chain*(rword.lstms))]))
+            fvecs.append(forward.output())
+            bvecs.append(backward.output())
+
+        bforward = self.bchildsetLSTMs[0].initial_state()
+        bbackward = self.bchildsetLSTMs[1].initial_state()
+        for i in range(len(sentence.rev_heads[predicate])):
+            bforward = bforward.add_input(fvecs[i])
+            bbackward = bbackward.add_input(bvecs[i])
+        return concatenate([bforward.output(), bbackward.output()])
+
     def Predict(self, conll_path):
         for iSentence, sentence in enumerate(read_conll(conll_path)):
             self.Init()
@@ -268,13 +293,9 @@ class SRLLSTM:
                 root.lstms = [root.vec for _ in xrange(self.nnvecs)]
             for p in range(len(sentence.predicates)):
                 predicate = sentence.predicates[p]
-                pred_dep_set = sentence.get_dep_set(predicate)
-                subcat_vec = []
-                for dep in self.deprels.keys():
-                    subcat_vec.extend([sentence.entries[pred_dep_set[dep]].lstms]) if pred_dep_set.has_key(
-                        dep) else subcat_vec.extend([self.empty])
+                subcat_lstm = self.childrenLstms(sentence, predicate)
                 for arg in range(1, len(sentence.entries)):
-                    scores = self.__evaluate(sentence, predicate, arg, subcat_vec)
+                    scores = self.__evaluate(sentence, predicate, arg, subcat_lstm)
                     sentence.entries[arg].predicateList[p] = max(chain(*scores), key=itemgetter(2))[0]
             renew_cg()
             yield sentence
@@ -308,13 +329,9 @@ class SRLLSTM:
                 root.lstms = [root.vec for _ in xrange(self.nnvecs)]
             for p in range(1, len(sentence.predicates)):
                 predicate = sentence.predicates[p]
-                pred_dep_set = sentence.get_dep_set(predicate)
-                subcat_vec = []
-                for dep in self.deprels.keys():
-                    subcat_vec.extend([sentence.entries[pred_dep_set[dep]].lstms]) if pred_dep_set.has_key(
-                        dep) else subcat_vec.extend([self.empty])
+                subcat_lstm = self.childrenLstms(sentence, predicate)
                 for arg in range(1, len(sentence.entries)):
-                    scores = self.__evaluate(sentence, predicate, arg, subcat_vec)
+                    scores = self.__evaluate(sentence, predicate, arg, subcat_lstm)
                     best = max(chain(*scores), key=itemgetter(2))
                     gold = sentence.entries[arg].predicateList[p]
                     predicted = best[0]
