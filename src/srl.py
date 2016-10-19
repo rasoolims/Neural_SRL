@@ -150,7 +150,7 @@ class SRLLSTM:
         positionVec = lookup(self.positionEmbeddings, position)
 
         feat_vecs = pred_vec + arg_vec + pred_head_vec + arg_head_vec + left_word_vec + right_word_vec+left_sib_vec+right_sib_vec
-        [feat_vecs.extend(v) for v in subcat_vec]
+        feat_vecs.extend(subcat_vec)
         input = concatenate([positionVec, concatenate(list(chain(*(feat_vecs))))])
         if self.hidden2_units > 0:
             routput = (self.routLayer * self.activation(self.rhid2Bias + self.rhid2Layer * self.activation(
@@ -265,7 +265,7 @@ class SRLLSTM:
                 pred_dep_set = sentence.get_dep_set(predicate)
                 subcat_vec = []
                 for dep in self.deprels:
-                    subcat_vec.append([sentence.entries[pred_dep_set[dep]].lstms]) if pred_dep_set.has_key(dep) else [self.empty]
+                    subcat_vec.extend([sentence.entries[pred_dep_set[dep]].lstms]) if pred_dep_set.has_key(dep) else [self.empty]
                 for arg in range(1, len(sentence.entries)):
                     scores = self.__evaluate(sentence, predicate, arg,subcat_vec)
                     sentence.entries[arg].predicateList[p] = max(chain(*scores), key=itemgetter(2))[0]
@@ -304,7 +304,7 @@ class SRLLSTM:
                 pred_dep_set = sentence.get_dep_set(predicate)
                 subcat_vec = []
                 for dep in self.deprels:
-                    subcat_vec.append([sentence.entries[pred_dep_set[dep]].lstms]) if pred_dep_set.has_key(dep) else [self.empty]
+                    subcat_vec.extend([sentence.entries[pred_dep_set[dep]].lstms]) if pred_dep_set.has_key(dep) else [self.empty]
                 for arg in range(1, len(sentence.entries)):
                     scores = self.__evaluate(sentence, predicate, arg,subcat_vec)
                     best = max(chain(*scores), key=itemgetter(2))
