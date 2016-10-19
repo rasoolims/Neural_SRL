@@ -149,7 +149,7 @@ class SRLLSTM:
         positionVec = lookup(self.positionEmbeddings, position)
 
         feat_vecs = pred_vec + arg_vec + pred_head_vec + arg_head_vec + left_word_vec + right_word_vec+left_sib_vec+right_sib_vec
-        [feat_vecs.append(v) for v in subcat_vec]
+        [feat_vecs.extend(v) for v in subcat_vec]
         input = concatenate([positionVec, concatenate(list(chain(*(feat_vecs))))])
         if self.hidden2_units > 0:
             routput = (self.routLayer * self.activation(self.rhid2Bias + self.rhid2Layer * self.activation(
