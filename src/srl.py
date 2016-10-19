@@ -64,8 +64,8 @@ class SRLLSTM:
         print 2*self.ldims + self.deprdims
         self.childsetLSTMs = [LSTMBuilder(1, 2*self.ldims + self.deprdims, self.ldims * 0.5, self.model),
                               LSTMBuilder(1, 2*self.ldims + self.deprdims, self.ldims * 0.5, self.model)]
-        self.bchildsetLSTMs = [LSTMBuilder(1, 2*self.ldims+ self.deprdims, self.ldims * 0.5, self.model),
-                              LSTMBuilder(1, 2*self.ldims+ self.deprdims, self.ldims * 0.5, self.model)]
+        self.bchildsetLSTMs = [LSTMBuilder(1, self.ldims, self.ldims * 0.5, self.model),
+                              LSTMBuilder(1, self.ldims, self.ldims * 0.5, self.model)]
         if self.bibiFlag:
             self.surfaceBuilders = [LSTMBuilder(1, dims, self.ldims * 0.5, self.model),
                                     LSTMBuilder(1, dims, self.ldims * 0.5, self.model)]
