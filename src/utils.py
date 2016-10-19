@@ -9,6 +9,44 @@ class ConllStruct:
     def head(self, dep):
         return self.entries[dep].parent_id
 
+    def __len__(self):
+        return len(self.entries)
+
+    def path2root(self, ind):
+        path = []
+        entry = self.entries[ind]
+        path.append(entry.parent_id)
+
+        if entry.parent_id>0:
+            path.extend(self.path2root(entry.parent_id))
+        return path
+
+    def path(self, p, a):
+        p1 = [p] + self.path(p)
+        p2 = [a] + self.path(a)
+
+        i = len(p1)-1
+        j = len(p2)-1
+
+        while i>=0 and j>=0:
+            if p1[i] == a:
+                j-=1
+                break
+            if p2[j]== p:
+                i-=1
+                break
+            if p1[i] == p2[j]:
+                i-=1
+                j-=1
+
+
+        final_path = []
+        for k in range(0, i+1):
+            final_path.append((p1[k],0))
+        for k in range(0, j+1):
+            final_path.append((p2[k],1))
+        return final_path
+
 class ConllEntry:
     def __init__(self, id, form, lemma, pos, sense = '_', parent_id=-1, relation='_', predicateList=dict()):
         self.id = id
