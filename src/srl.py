@@ -282,12 +282,16 @@ class SRLLSTM:
             fvecs.append(forward.output())
             bvecs.append(backward.output())
 
+        vecs = []
+        for i in range(len(sentence.rev_heads[predicate])):
+            vecs.append(concatenate([fvecs[i],  bvecs[len(bvecs)-i-1]]))
+
         bforward = self.bchildsetLSTMs[0].initial_state()
         bbackward = self.bchildsetLSTMs[1].initial_state()
         for i in range(len(sentence.rev_heads[predicate])):
             print i
-            bforward = bforward.add_input(fvecs[i])
-            bbackward = bbackward.add_input(bvecs[i])
+            bforward = bforward.add_input(vecs[i])
+            bbackward = bbackward.add_input(vecs[len(bvecs)-i-1])
         print 'pre-concat'
         return concatenate([bforward.output(), bbackward.output()])
 
