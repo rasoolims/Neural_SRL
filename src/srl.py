@@ -329,8 +329,10 @@ class SRLLSTM:
                 root.lstms = [root.vec for _ in xrange(self.nnvecs)]
             for p in range(1, len(sentence.predicates)):
                 predicate = sentence.predicates[p]
+                print 'subcat_lstm',predicate
                 subcat_lstm = self.childrenLstms(sentence, predicate)
                 for arg in range(1, len(sentence.entries)):
+                    print 'arg',arg
                     scores = self.__evaluate(sentence, predicate, arg, subcat_lstm)
                     best = max(chain(*scores), key=itemgetter(2))
                     gold = sentence.entries[arg].predicateList[p]
