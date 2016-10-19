@@ -34,7 +34,7 @@ class SRLLSTM:
         self.headFlag = options.headFlag
         self.rlMostFlag = options.rlMostFlag
         self.rlFlag = options.rlFlag
-        self.k = 4
+        self.k = 6
         self.nnvecs = 2
 
         self.external_embedding = None
@@ -138,8 +138,10 @@ class SRLLSTM:
         pred_head_vec = [sentence.entries[pred_head].lstms if pred_head>=0 else [self.empty]]
         arg_head = sentence.head(arg_index)
         arg_head_vec = [sentence.entries[arg_head].lstms if arg_head >= 0 else [self.empty]]
+        left_word_vec = [sentence.entries[arg_index-1].lstms if arg_index>1 else [self.empty]]
+        right_word_vec = [sentence.entries[arg_index+1].lstms if arg_index+1<len(sentence) else [self.empty]]
 
-        input = concatenate(list(chain(*(pred_vec + arg_vec + pred_head_vec + arg_head_vec))))
+        input = concatenate(list(chain(*(pred_vec + arg_vec + pred_head_vec + arg_head_vec+left_word_vec+right_word_vec))))
 
         if self.hidden2_units > 0:
             routput = (self.routLayer * self.activation(self.rhid2Bias + self.rhid2Layer * self.activation(
