@@ -270,7 +270,9 @@ class SRLLSTM:
 
         fvecs = []
         bvecs = []
+        print sentence.rev_heads[predicate]
         for froot, rroot in zip(sentence.rev_heads[predicate], reversed(sentence.rev_heads[predicate])):
+            print froot,rroot
             fword = sentence.entries[froot]
             rword = sentence.entries[rroot]
             forward = forward.add_input(concatenate([fword.depvec, concatenate(list(chain(*(fword.lstms))))]))
@@ -281,8 +283,10 @@ class SRLLSTM:
         bforward = self.bchildsetLSTMs[0].initial_state()
         bbackward = self.bchildsetLSTMs[1].initial_state()
         for i in range(len(sentence.rev_heads[predicate])):
+            print i
             bforward = bforward.add_input(fvecs[i])
             bbackward = bbackward.add_input(bvecs[i])
+        print 'pre-concat'
         return concatenate([bforward.output(), bbackward.output()])
 
     def Predict(self, conll_path):
