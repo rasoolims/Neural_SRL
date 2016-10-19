@@ -273,8 +273,9 @@ class SRLLSTM:
         for froot, rroot in zip(sentence.rev_heads[predicate], reversed(sentence.rev_heads[predicate])):
             fword = sentence.entries[froot]
             rword = sentence.entries[rroot]
-            forward = forward.add_input(concatenate([fword.depvec, list(chain*(fword.lstms))]))
-            backward = backward.add_input(concatenate([rword.depvec, list(chain*(rword.lstms))]))
+            print type(fword.depvec), type(fword.lstms)
+            forward = forward.add_input(concatenate([fword.depvec, fword.lstms]))
+            backward = backward.add_input(concatenate([rword.depvec, rword.lstms]))
             fvecs.append(forward.output())
             bvecs.append(backward.output())
 
