@@ -276,7 +276,7 @@ class SRLLSTM:
             rword = sentence.entries[rroot]
             fdepvec = lookup(self.depRelEmbedding, int(self.deprels[fword.relation])) if self.deprdims>0 else None
             bdepvec = lookup(self.depRelEmbedding, int(self.deprels[rword.relation])) if self.deprdims>0 else None
-            print fdepvec, bdepvec, concatenate(list(chain(*(fword.lstms)))), concatenate(list(chain(*(rword.lstms))))
+            print fdepvec, bdepvec, fword.lstms, concatenate(list(chain(*(rword.lstms))))
             forward = forward.add_input(concatenate([fdepvec, concatenate(list(chain(*(fword.lstms))))]))
             backward = backward.add_input(concatenate([bdepvec, concatenate(list(chain(*(rword.lstms))))]))
             fvecs.append(forward.output())
