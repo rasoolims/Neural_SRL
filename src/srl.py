@@ -97,7 +97,6 @@ class SRLLSTM:
         self.word2lstmbias_ = self.model.add_parameters((self.ldims))
         self.lstm2lstm_ = self.model.add_parameters((self.ldims, self.ldims * self.nnvecs + self.rdims))
         self.lstm2lstmbias_ = self.model.add_parameters((self.ldims))
-        print 'self.ldims * self.nnvecs * self.k + self.positionDim',self.ldims * self.nnvecs * self.k + self.positionDim
         self.hidLayer_ = self.model.add_parameters((self.hidden_units, self.ldims * self.nnvecs * self.k + self.positionDim))
         self.hidBias_ = self.model.add_parameters((self.hidden_units))
 
@@ -304,6 +303,7 @@ class SRLLSTM:
                 subcat_vec = []
                 for dep in self.deprels.keys():
                     subcat_vec.extend([sentence.entries[pred_dep_set[dep]].lstms]) if pred_dep_set.has_key(dep) else [self.empty]
+                print subcat_vec
                 for arg in range(1, len(sentence.entries)):
                     scores = self.__evaluate(sentence, predicate, arg,subcat_vec)
                     best = max(chain(*scores), key=itemgetter(2))
