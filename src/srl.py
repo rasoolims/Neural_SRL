@@ -250,8 +250,8 @@ class SRLLSTM:
         for froot, rroot in zip(sentence.rev_heads[predicate], reversed(sentence.rev_heads[predicate])):
             fword = sentence.entries[froot]
             rword = sentence.entries[rroot]
-            fdepvec = lookup(self.depRelEmbedding, int(self.deprels[fword.relation])) if self.deprdims>0 else None
-            bdepvec = lookup(self.depRelEmbedding, int(self.deprels[rword.relation])) if self.deprdims>0 else None
+            fdepvec = lookup(self.depRelEmbedding, int(self.deprels[fword.relation]))
+            bdepvec = lookup(self.depRelEmbedding, int(self.deprels[rword.relation]))
             forward = forward.add_input(concatenate([fdepvec, fword.lstms[0], fword.lstms[1]]))
             backward = backward.add_input(concatenate([bdepvec,  rword.lstms[0], rword.lstms[1]]))
             fvecs.append(forward.output())
