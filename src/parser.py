@@ -26,7 +26,6 @@ if __name__ == '__main__':
     parser.add_option("--epochs", type="int", dest="epochs", default=30)
     parser.add_option("--hidden", type="int", dest="hidden_units", default=100)
     parser.add_option("--hidden2", type="int", dest="hidden2_units", default=0)
-    parser.add_option("--k", type="int", dest="window", default=3)
     parser.add_option("--lr", type="float", dest="learning_rate", default=0.1)
     parser.add_option("--outdir", type="string", dest="output", default="results")
     parser.add_option("--activation", type="string", dest="activation", default="tanh")

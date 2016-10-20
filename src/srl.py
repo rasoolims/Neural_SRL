@@ -58,8 +58,6 @@ class SRLLSTM:
             print 'Load external embedding. Vector dimensions', self.edim
 
         dims = self.wdims + self.lemDims + self.pdims + (self.edim if self.external_embedding is not None else 0)
-        self.blstmFlag = options.blstmFlag
-        self.bibiFlag = options.bibiFlag
 
         self.childsetLSTMs = [LSTMBuilder(1, 2*self.ldims + self.deprdims, self.ldims * 0.5, self.model),
                               LSTMBuilder(1, 2*self.ldims + self.deprdims, self.ldims * 0.5, self.model)]
