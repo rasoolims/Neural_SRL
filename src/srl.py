@@ -90,6 +90,9 @@ class SRLLSTM:
         self.positionEmbeddings = self.model.add_lookup_parameters(
             (3, self.positionDim))  # for showing the actual position
 
+        self.word2lstm_ = self.model.add_parameters((self.ldims, self.wdims + self.lemDims + self.pdims + (
+        self.edim if self.external_embedding is not None else 0)))
+        self.word2lstmbias_ = self.model.add_parameters((self.ldims))
         self.hidLayer_ = self.model.add_parameters(
             (self.hidden_units, self.ldims * self.nnvecs * self.k + self.positionDim))
         self.hidBias_ = self.model.add_parameters((self.hidden_units))
@@ -112,6 +115,8 @@ class SRLLSTM:
             (2 * (len(self.irels) + 0) + 1, self.hidden2_units if self.hidden2_units > 0 else self.hidden_units))
         self.routBias_ = self.model.add_parameters((2 * (len(self.irels) + 0) + 1))
 
+        self.word2lstm = parameter(self.word2lstm_)
+        self.word2lstmbias = parameter(self.word2lstmbias_)
         self.hidLayer = parameter(self.hidLayer_)
         self.hidBias = parameter(self.hidBias_)
         self.hid2Layer = parameter(self.hid2Layer_)
@@ -169,6 +174,8 @@ class SRLLSTM:
         self.model.load(filename)
 
     def Init(self):
+        self.word2lstm = parameter(self.word2lstm_)
+        self.word2lstmbias = parameter(self.word2lstmbias_)
         self.hidLayer = parameter(self.hidLayer_)
         self.hidBias = parameter(self.hidBias_)
         self.hid2Layer = parameter(self.hid2Layer_)
