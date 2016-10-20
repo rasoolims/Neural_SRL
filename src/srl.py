@@ -115,6 +115,7 @@ class SRLLSTM:
             (2, self.hidden2_units if self.hidden2_units > 0 else self.hidden_units))
         self.outBias_ = self.model.add_parameters((2))
 
+        print self.ldims , self.nnvecs , self.k , self.positionDim
         self.rhidLayer_ = self.model.add_parameters(
             (self.hidden_units, self.ldims * self.nnvecs * self.k + self.positionDim))
         self.rhidBias_ = self.model.add_parameters((self.hidden_units))
