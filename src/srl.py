@@ -158,15 +158,18 @@ class SRLLSTM:
         right_sib_vec = [sentence.entries[right_sibling].lstms if right_sibling >= 0 else [self.empty]]
         position = 0 if arg_index == pred_index else 1 if arg_index > pred_index else 2
         positionVec = lookup(self.positionEmbeddings, position)
-
+        print 'pre-feat-vec'
         feat_vecs = subcat_lstm + pred_vec + arg_vec + pred_head_vec + arg_head_vec + left_word_vec + right_word_vec + left_sib_vec + right_sib_vec
+        print 'pre position concat'
         input = concatenate([positionVec, concatenate(list(chain(*(feat_vecs))))])
+        print 'pre routput'
         if self.hidden2_units > 0:
             routput = (self.routLayer * self.activation(self.rhid2Bias + self.rhid2Layer * self.activation(
                 self.rhidLayer * input + self.rhidBias)) + self.routBias)
         else:
             routput = (self.routLayer * self.activation(self.rhidLayer * input + self.rhidBias) + self.routBias)
 
+        print 'pre output'
         if self.hidden2_units > 0:
             output = (self.outLayer * self.activation(
                 self.hid2Bias + self.hid2Layer * self.activation(self.hidLayer * input + self.hidBias)) + self.outBias)
@@ -267,12 +270,9 @@ class SRLLSTM:
     def childrenLstms(self, sentence, predicate):
         forward = self.childsetLSTMs[0].initial_state()
         backward = self.childsetLSTMs[1].initial_state()
-
         fvecs = []
         bvecs = []
-        print sentence.rev_heads[predicate]
         for froot, rroot in zip(sentence.rev_heads[predicate], reversed(sentence.rev_heads[predicate])):
-            print froot,rroot
             fword = sentence.entries[froot]
             rword = sentence.entries[rroot]
             fdepvec = lookup(self.depRelEmbedding, int(self.deprels[fword.relation])) if self.deprdims>0 else None
@@ -289,10 +289,8 @@ class SRLLSTM:
         bforward = self.bchildsetLSTMs[0].initial_state()
         bbackward = self.bchildsetLSTMs[1].initial_state()
         for i in range(len(sentence.rev_heads[predicate])):
-            print i
             bforward = bforward.add_input(vecs[i])
             bbackward = bbackward.add_input(vecs[len(bvecs)-i-1])
-        print 'pre-concat'
         return [concatenate([bforward.output(), bbackward.output()])]
 
     def Predict(self, conll_path):
@@ -339,7 +337,6 @@ class SRLLSTM:
                 root.lstms = [root.vec for _ in xrange(self.nnvecs)]
             for p in range(1, len(sentence.predicates)):
                 predicate = sentence.predicates[p]
-                print 'subcat_lstm',predicate
                 subcat_lstm = self.childrenLstms(sentence, predicate)
                 for arg in range(1, len(sentence.entries)):
                     print 'arg',arg
