@@ -130,8 +130,9 @@ class SRLLSTM:
         self.routLayer = parameter(self.routLayer_)
         self.routBias = parameter(self.routBias_)
 
-    def __evaluate(self, sentence, pred_index, arg_index, subcat_lstm):
+    def __evaluate(self, sentence, pred_index, arg_index):
         pred_vec = [sentence.entries[pred_index].lstms]
+        subcat_vec = [sentence.entries[pred_index].childLstms]
         arg_vec = [sentence.entries[arg_index].lstms]
         pred_head = sentence.head(pred_index)
         pred_head_vec = [sentence.entries[pred_head].lstms if pred_head >= 0 else [self.empty]]
@@ -144,8 +145,8 @@ class SRLLSTM:
         right_sib_vec = [sentence.entries[right_sibling].lstms if right_sibling >= 0 else [self.empty]]
         position = 0 if arg_index == pred_index else 1 if arg_index > pred_index else 2
         positionVec = lookup(self.positionEmbeddings, position)
-        feat_vecs =  pred_vec + arg_vec + pred_head_vec + arg_head_vec + left_word_vec + right_word_vec + left_sib_vec + right_sib_vec
-        input = concatenate([positionVec, subcat_lstm[0], subcat_lstm[1], subcat_lstm[2], subcat_lstm[3], concatenate(list(chain(*(feat_vecs))))])
+        feat_vecs =  subcat_vec + pred_vec + arg_vec + pred_head_vec + arg_head_vec + left_word_vec + right_word_vec + left_sib_vec + right_sib_vec
+        input = concatenate([positionVec, concatenate(list(chain(*(feat_vecs))))])
         if self.hidden2_units > 0:
             routput = (self.routLayer * self.activation(self.rhid2Bias + self.rhid2Layer * self.activation(
                 self.rhidLayer * input + self.rhidBias)) + self.routBias)
@@ -243,30 +244,31 @@ class SRLLSTM:
 
 
     def childrenLstms(self, sentence, predicate):
-        forward = self.childsetLSTMs[0].initial_state()
-        backward = self.childsetLSTMs[1].initial_state()
-        fvecs = []
-        bvecs = []
-        for froot, rroot in zip(sentence.rev_heads[predicate], reversed(sentence.rev_heads[predicate])):
-            fword = sentence.entries[froot]
-            rword = sentence.entries[rroot]
-            fdepvec = lookup(self.depRelEmbedding, int(self.deprels[fword.relation]))
-            bdepvec = lookup(self.depRelEmbedding, int(self.deprels[rword.relation]))
-            forward = forward.add_input(concatenate([fdepvec, fword.lstms[0], fword.lstms[1]]))
-            backward = backward.add_input(concatenate([bdepvec,  rword.lstms[0], rword.lstms[1]]))
-            fvecs.append(forward.output())
-            bvecs.append(backward.output())
+        for root in sentence:
+            forward = self.childsetLSTMs[0].initial_state()
+            backward = self.childsetLSTMs[1].initial_state()
+            fvecs = []
+            bvecs = []
+            for froot, rroot in zip(sentence.rev_heads[predicate], reversed(sentence.rev_heads[predicate])):
+                fword = sentence.entries[froot]
+                rword = sentence.entries[rroot]
+                fdepvec = lookup(self.depRelEmbedding, int(self.deprels[fword.relation]))
+                bdepvec = lookup(self.depRelEmbedding, int(self.deprels[rword.relation]))
+                forward = forward.add_input(concatenate([fdepvec, fword.lstms[0], fword.lstms[1]]))
+                backward = backward.add_input(concatenate([bdepvec,  rword.lstms[0], rword.lstms[1]]))
+                fvecs.append(forward.output())
+                bvecs.append(backward.output())
 
-        vecs = []
-        for i in range(len(sentence.rev_heads[predicate])):
-            vecs.append(concatenate([fvecs[i],  bvecs[len(bvecs)-i-1]]))
+            vecs = []
+            for i in range(len(sentence.rev_heads[predicate])):
+                vecs.append(concatenate([fvecs[i],  bvecs[len(bvecs)-i-1]]))
 
-        bforward = self.bchildsetLSTMs[0].initial_state()
-        bbackward = self.bchildsetLSTMs[1].initial_state()
-        for i in range(len(sentence.rev_heads[predicate])):
-            bforward = bforward.add_input(vecs[i])
-            bbackward = bbackward.add_input(vecs[len(bvecs)-i-1])
-        return [forward.output(),backward.output(),bforward.output(), bbackward.output()]
+            bforward = self.bchildsetLSTMs[0].initial_state()
+            bbackward = self.bchildsetLSTMs[1].initial_state()
+            for i in range(len(sentence.rev_heads[predicate])):
+                bforward = bforward.add_input(vecs[i])
+                bbackward = bbackward.add_input(vecs[len(bvecs)-i-1])
+            root.childLstms = concatenate([bforward.output(), bbackward.output()])
 
     def Predict(self, conll_path):
         for iSentence, sentence in enumerate(read_conll(conll_path)):
@@ -274,11 +276,11 @@ class SRLLSTM:
             self.getWordEmbeddings(sentence.entries, False)
             for root in sentence.entries:
                 root.lstms = [root.vec for _ in xrange(self.nnvecs)]
+                root.childLstms  = [root.childLstms for _ in xrange(self.nnvecs)]
             for p in range(len(sentence.predicates)):
                 predicate = sentence.predicates[p]
-                subcat_lstm = self.childrenLstms(sentence, predicate)
                 for arg in range(1, len(sentence.entries)):
-                    scores = self.__evaluate(sentence, predicate, arg, subcat_lstm)
+                    scores = self.__evaluate(sentence, predicate, arg)
                     sentence.entries[arg].predicateList[p] = max(chain(*scores), key=itemgetter(2))[0]
             renew_cg()
             yield sentence
@@ -310,11 +312,12 @@ class SRLLSTM:
             self.getWordEmbeddings(sentence.entries, True)
             for root in sentence.entries:
                 root.lstms = [root.vec for _ in xrange(self.nnvecs)]
+                root.childLstms = [root.childLstms for _ in xrange(self.nnvecs)]
             for p in range(1, len(sentence.predicates)):
                 predicate = sentence.predicates[p]
                 subcat_lstm = self.childrenLstms(sentence, predicate)
                 for arg in range(1, len(sentence.entries)):
-                    scores = self.__evaluate(sentence, predicate, arg, subcat_lstm)
+                    scores = self.__evaluate(sentence, predicate, arg)
                     best = max(chain(*scores), key=itemgetter(2))
                     gold = sentence.entries[arg].predicateList[p]
                     predicted = best[0]

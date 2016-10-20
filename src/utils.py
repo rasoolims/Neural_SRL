@@ -72,6 +72,8 @@ class ConllEntry:
         self.relation = relation
         self.predicateList = predicateList
         self.sense = sense
+        self.lstms = None
+        self.childLstms = None
 
     def __str__(self):
         entry_list = [str(self.id), self.form, self.lemma, self.lemma, self.pos, self.pos, '_', '_',
