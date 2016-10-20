@@ -159,9 +159,9 @@ class SRLLSTM:
         position = 0 if arg_index == pred_index else 1 if arg_index > pred_index else 2
         positionVec = lookup(self.positionEmbeddings, position)
         print 'pre-feat-vec'
-        feat_vecs =   arg_vec + pred_head_vec + arg_head_vec + left_word_vec + right_word_vec + left_sib_vec + right_sib_vec
+        feat_vecs =  pred_vec + arg_vec + pred_head_vec + arg_head_vec + left_word_vec + right_word_vec + left_sib_vec + right_sib_vec
         print 'pre position concat'
-        input = concatenate([positionVec, subcat_lstm[0], subcat_lstm[1], concatenate(list(chain(*(feat_vecs))))])
+        input = concatenate([positionVec, subcat_lstm[0], subcat_lstm[1], subcat_lstm[2], subcat_lstm[3], concatenate(list(chain(*(feat_vecs))))])
         print 'pre routput'
         if self.hidden2_units > 0:
             routput = (self.routLayer * self.activation(self.rhid2Bias + self.rhid2Layer * self.activation(
@@ -291,7 +291,7 @@ class SRLLSTM:
         for i in range(len(sentence.rev_heads[predicate])):
             bforward = bforward.add_input(vecs[i])
             bbackward = bbackward.add_input(vecs[len(bvecs)-i-1])
-        return [bforward.output(), bbackward.output()]
+        return [forward.output(),backward.output(),bforward.output(), bbackward.output()]
 
     def Predict(self, conll_path):
         for iSentence, sentence in enumerate(read_conll(conll_path)):
