@@ -35,7 +35,7 @@ class SRLLSTM:
         self.headFlag = options.headFlag
         self.rlMostFlag = options.rlMostFlag
         self.rlFlag = options.rlFlag
-        self.k = 8
+        self.k = 9
         self.positionDim = 2
 
         self.external_embedding = None
@@ -91,8 +91,7 @@ class SRLLSTM:
         self.word2lstm_ = self.model.add_parameters((self.ldims, self.wdims + self.lemDims + self.pdims + (
         self.edim if self.external_embedding is not None else 0)))
         self.word2lstmbias_ = self.model.add_parameters((self.ldims))
-        self.hidLayer_ = self.model.add_parameters(
-            (self.hidden_units, self.ldims * self.k + self.positionDim))
+        self.hidLayer_ = self.model.add_parameters((self.hidden_units, self.ldims * self.k + self.positionDim))
         self.hidBias_ = self.model.add_parameters((self.hidden_units))
 
         self.hid2Layer_ = self.model.add_parameters((self.hidden2_units, self.hidden_units))
@@ -129,22 +128,21 @@ class SRLLSTM:
         self.routBias = parameter(self.routBias_)
 
     def __evaluate(self, sentence, pred_index, arg_index):
-        pred_vec = [sentence.entries[pred_index].lstms]
-        subcat_vec = [sentence.entries[pred_index].childLstms]
-        arg_vec = [sentence.entries[arg_index].lstms]
+        pred_vec = sentence.entries[pred_index].lstms
+        subcat_vec = sentence.entries[pred_index].childLstms
+        arg_vec = sentence.entries[arg_index].lstms
         pred_head = sentence.head(pred_index)
-        pred_head_vec = [sentence.entries[pred_head].lstms if pred_head >= 0 else [self.empty]]
+        pred_head_vec = sentence.entries[pred_head].lstms if pred_head >= 0 else self.empty
         arg_head = sentence.head(arg_index)
-        arg_head_vec = [sentence.entries[arg_head].lstms if arg_head >= 0 else [self.empty]]
-        left_word_vec = [sentence.entries[arg_index - 1].lstms if arg_index > 1 else [self.empty]]
-        right_word_vec = [sentence.entries[arg_index + 1].lstms if arg_index + 1 < len(sentence) else [self.empty]]
+        arg_head_vec = sentence.entries[arg_head].lstms if arg_head >= 0 else self.empty
+        left_word_vec = sentence.entries[arg_index - 1].lstms if arg_index > 1 else self.empty
+        right_word_vec = sentence.entries[arg_index + 1].lstms if arg_index + 1 < len(sentence) else self.empty
         (left_sibling, right_sibling) = sentence.left_right_siblings(arg_index)
-        left_sib_vec = [sentence.entries[left_sibling].lstms if left_sibling >= 0 else [self.empty]]
-        right_sib_vec = [sentence.entries[right_sibling].lstms if right_sibling >= 0 else [self.empty]]
+        left_sib_vec = sentence.entries[left_sibling].lstms if left_sibling >= 0 else self.empty
+        right_sib_vec = sentence.entries[right_sibling].lstms if right_sibling >= 0 else self.empty
         position = 0 if arg_index == pred_index else 1 if arg_index > pred_index else 2
         positionVec = lookup(self.positionEmbeddings, position)
-        feat_vecs =  subcat_vec + pred_vec + arg_vec + pred_head_vec + arg_head_vec + left_word_vec + right_word_vec + left_sib_vec + right_sib_vec
-        input = concatenate([positionVec, concatenate(list(chain(*(feat_vecs))))])
+        input = concatenate([positionVec,subcat_vec, pred_vec , arg_vec , pred_head_vec , arg_head_vec , left_word_vec , right_word_vec , left_sib_vec , right_sib_vec])
         if self.hidden2_units > 0:
             routput = (self.routLayer * self.activation(self.rhid2Bias + self.rhid2Layer * self.activation(
                 self.rhidLayer * input + self.rhidBias)) + self.routBias)
@@ -239,7 +237,7 @@ class SRLLSTM:
             froot.bfvec = bforward.output()
             rroot.bbvec = bbackward.output()
         for root in sentence:
-            root.vec = concatenate([root.bfvec, root.bbvec])
+            root.lstms = concatenate([root.bfvec, root.bbvec])
 
 
     def childrenLstms(self, sentence):
@@ -257,40 +255,27 @@ class SRLLSTM:
                 forward = forward.add_input(concatenate([fpositionVec, fword.depvec, fword.lstms]))
                 backward = backward.add_input(concatenate([bpositionVec, rword.depvec, rword.lstms]))
 
-                if froot != root.id: fword.f_head_vec = forward.output()
-                else: fword.f_own_vec = forward.output()
-                if rroot != root.id: rword.b_head_vec = backward.output()
-                else: rword.b_own_vec = backward.output()
+                fword.f_head_vec = forward.output()
+                rword.b_head_vec = backward.output()
 
             for dep in deps:
                 word = sentence.entries[dep]
-                if dep == root.id:
-                    word.own_vec = concatenate([word.f_own_vec, word.b_own_vec])
-                else:
-                    word.head_vec = concatenate([word.f_head_vec, word.b_head_vec])
+                word.head_vec = concatenate([word.f_head_vec, word.b_head_vec])
 
             bforward = self.bchildsetLSTMs[0].initial_state()
             bbackward = self.bchildsetLSTMs[1].initial_state()
             for froot, rroot in zip(deps, reversed(deps)):
                 fword = sentence.entries[froot]
                 rword = sentence.entries[rroot]
-                if froot != root.id: bforward = bforward.add_input(fword.head_vec)
-                else: bforward.add_input(fword.own_vec)
-                if rroot != root.id: bbackward = bbackward.add_input(rword.head_vec)
-                else: bbackward.add_input(rword.own_vec)
-                if froot != root.id: fword.bf_head_vec = bforward.output()
-                else: fword.bf_own_vec = bforward.output()
-                if rroot != root.id: rword.bb_head_vec = bbackward.output()
-                else: rword.bb_own_vec = bbackward.output()
-            root.ch_vec = concatenate([bforward.output(), bbackward.output()])
+                bforward = bforward.add_input(fword.head_vec)
+                bbackward = bbackward.add_input(rword.head_vec)
+            root.childLstms = concatenate([bforward.output(), bbackward.output()])
 
     def Predict(self, conll_path):
         for iSentence, sentence in enumerate(read_conll(conll_path)):
             self.Init()
             self.getWordEmbeddings(sentence.entries, False)
-            for root in sentence.entries:
-                root.lstms = root.vec
-            self.childrenLstms(sentence)
+            #self.childrenLstms(sentence)
             for p in range(len(sentence.predicates)):
                 predicate = sentence.predicates[p]
                 for arg in range(1, len(sentence.entries)):
@@ -312,7 +297,7 @@ class SRLLSTM:
         errs = []
         self.Init()
         for iSentence, sentence in enumerate(shuffledData):
-            if iSentence % 1 == 0:
+            if iSentence % 100 == 0:
                 try:
                     print 'Processing sentence number:', iSentence, 'Loss:', eloss / etotal, 'Errors:', (float(
                         eerrors)) / etotal, 'Labeled Errors:', (float(lerrors) / etotal), 'Time', time.time() - start
@@ -324,11 +309,7 @@ class SRLLSTM:
                 etotal = 0
                 lerrors = 0
             self.getWordEmbeddings(sentence.entries, True)
-            for root in sentence.entries:
-                root.lstms = root.vec
             self.childrenLstms(sentence)
-            for root in sentence.entries:
-                root.childLstms = root.ch_vec
             for p in range(1, len(sentence.predicates)):
                 predicate = sentence.predicates[p]
                 for arg in range(1, len(sentence.entries)):
@@ -362,14 +343,12 @@ class SRLLSTM:
                         errs.append(loss)
                     etotal += 1
             if len(errs) > 50:
-                print 'backward'
                 eerrs = esum(errs)
                 scalar_loss = eerrs.scalar_value()
                 eerrs.backward()
                 self.trainer.update()
                 errs = []
                 renew_cg()
-                print 're-init'
                 self.Init()
 
         if len(errs) > 0:
