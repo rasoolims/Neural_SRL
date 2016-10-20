@@ -275,7 +275,7 @@ class SRLLSTM:
         for iSentence, sentence in enumerate(read_conll(conll_path)):
             self.Init()
             self.getWordEmbeddings(sentence.entries, False)
-            #self.childrenLstms(sentence)
+            self.childrenLstms(sentence)
             for p in range(len(sentence.predicates)):
                 predicate = sentence.predicates[p]
                 for arg in range(1, len(sentence.entries)):
