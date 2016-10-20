@@ -86,8 +86,7 @@ class SRLLSTM:
         self.posEmbedding = self.model.add_lookup_parameters((len(pos) + 3, self.pdims))
         self.depRelEmbedding = self.model.add_lookup_parameters((len(depRels), self.deprdims))
         self.semRelEmbedding = self.model.add_lookup_parameters((len(rels), self.rdims))
-        self.positionEmbeddings = self.model.add_lookup_parameters(
-            (3, self.positionDim))  # for showing the actual position
+        self.positionEmbeddings = self.model.add_lookup_parameters((3, self.positionDim))  # showing the actual position
 
         self.word2lstm_ = self.model.add_parameters((self.ldims, self.wdims + self.lemDims + self.pdims + (
         self.edim if self.external_embedding is not None else 0)))
