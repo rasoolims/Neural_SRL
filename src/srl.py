@@ -65,18 +65,11 @@ class SRLLSTM:
                               LSTMBuilder(1, 2*self.ldims + self.deprdims, self.ldims * 0.5, self.model)]
         self.bchildsetLSTMs = [LSTMBuilder(1, self.ldims, self.ldims * 0.5, self.model),
                               LSTMBuilder(1, self.ldims, self.ldims * 0.5, self.model)]
-        if self.bibiFlag:
-            self.surfaceBuilders = [LSTMBuilder(1, dims, self.ldims * 0.5, self.model),
-                                    LSTMBuilder(1, dims, self.ldims * 0.5, self.model)]
-            self.bsurfaceBuilders = [LSTMBuilder(1, self.ldims, self.ldims * 0.5, self.model),
-                                     LSTMBuilder(1, self.ldims, self.ldims * 0.5, self.model)]
-        elif self.blstmFlag:
-            if self.layers > 0:
-                self.surfaceBuilders = [LSTMBuilder(self.layers, dims, self.ldims * 0.5, self.model),
-                                        LSTMBuilder(self.layers, dims, self.ldims * 0.5, self.model)]
-            else:
-                self.surfaceBuilders = [SimpleRNNBuilder(1, dims, self.ldims * 0.5, self.model),
-                                        LSTMBuilder(1, dims, self.ldims * 0.5, self.model)]
+        self.surfaceBuilders = [LSTMBuilder(1, dims, self.ldims * 0.5, self.model),
+                                LSTMBuilder(1, dims, self.ldims * 0.5, self.model)]
+        self.bsurfaceBuilders = [LSTMBuilder(1, self.ldims, self.ldims * 0.5, self.model),
+                                 LSTMBuilder(1, self.ldims, self.ldims * 0.5, self.model)]
+
 
         self.hidden_units = options.hidden_units
         self.hidden2_units = options.hidden2_units
@@ -234,33 +227,28 @@ class SRLLSTM:
                 root.evec = None
             root.ivec = concatenate(filter(None, [root.wordvec, root.lemmaVec, root.posvec, root.evec]))
 
-        if self.blstmFlag:
-            forward = self.surfaceBuilders[0].initial_state()
-            backward = self.surfaceBuilders[1].initial_state()
+        forward = self.surfaceBuilders[0].initial_state()
+        backward = self.surfaceBuilders[1].initial_state()
 
-            for froot, rroot in zip(sentence, reversed(sentence)):
-                forward = forward.add_input(froot.ivec)
-                backward = backward.add_input(rroot.ivec)
-                froot.fvec = forward.output()
-                rroot.bvec = backward.output()
-            for root in sentence:
-                root.vec = concatenate([root.fvec, root.bvec])
+        for froot, rroot in zip(sentence, reversed(sentence)):
+            forward = forward.add_input(froot.ivec)
+            backward = backward.add_input(rroot.ivec)
+            froot.fvec = forward.output()
+            rroot.bvec = backward.output()
+        for root in sentence:
+            root.vec = concatenate([root.fvec, root.bvec])
 
-            if self.bibiFlag:
-                bforward = self.bsurfaceBuilders[0].initial_state()
-                bbackward = self.bsurfaceBuilders[1].initial_state()
+        bforward = self.bsurfaceBuilders[0].initial_state()
+        bbackward = self.bsurfaceBuilders[1].initial_state()
 
-                for froot, rroot in zip(sentence, reversed(sentence)):
-                    bforward = bforward.add_input(froot.vec)
-                    bbackward = bbackward.add_input(rroot.vec)
-                    froot.bfvec = bforward.output()
-                    rroot.bbvec = bbackward.output()
-                for root in sentence:
-                    root.vec = concatenate([root.bfvec, root.bbvec])
-        else:
-            for root in sentence:
-                root.ivec = (self.word2lstm * root.ivec) + self.word2lstmbias
-                root.vec = tanh(root.ivec)
+        for froot, rroot in zip(sentence, reversed(sentence)):
+            bforward = bforward.add_input(froot.vec)
+            bbackward = bbackward.add_input(rroot.vec)
+            froot.bfvec = bforward.output()
+            rroot.bbvec = bbackward.output()
+        for root in sentence:
+            root.vec = concatenate([root.bfvec, root.bbvec])
+
 
     def childrenLstms(self, sentence, predicate):
         forward = self.childsetLSTMs[0].initial_state()

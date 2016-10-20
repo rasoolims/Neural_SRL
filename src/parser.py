@@ -34,8 +34,6 @@ if __name__ == '__main__':
     parser.add_option("--lstmdims", type="int", dest="lstm_dims", default=200)
     parser.add_option("--cnn-seed", type="int", dest="seed", default=7)
     parser.add_option("--disableoracle", action="store_false", dest="oracle", default=True)
-    parser.add_option("--disableblstm", action="store_false", dest="blstmFlag", default=True)
-    parser.add_option("--bibi-lstm", action="store_true", dest="bibiFlag", default=False)
     parser.add_option("--usehead", action="store_true", dest="headFlag", default=False)
     parser.add_option("--userlmost", action="store_true", dest="rlFlag", default=False)
     parser.add_option("--userl", action="store_true", dest="rlMostFlag", default=False)
