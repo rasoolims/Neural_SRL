@@ -115,7 +115,6 @@ class SRLLSTM:
             (2, self.hidden2_units if self.hidden2_units > 0 else self.hidden_units))
         self.outBias_ = self.model.add_parameters((2))
 
-        print self.ldims , self.nnvecs , self.k , self.positionDim
         self.rhidLayer_ = self.model.add_parameters(
             (self.hidden_units, self.ldims * self.nnvecs * self.k + self.positionDim))
         self.rhidBias_ = self.model.add_parameters((self.hidden_units))
@@ -158,18 +157,14 @@ class SRLLSTM:
         right_sib_vec = [sentence.entries[right_sibling].lstms if right_sibling >= 0 else [self.empty]]
         position = 0 if arg_index == pred_index else 1 if arg_index > pred_index else 2
         positionVec = lookup(self.positionEmbeddings, position)
-        print 'pre-feat-vec'
         feat_vecs =  pred_vec + arg_vec + pred_head_vec + arg_head_vec + left_word_vec + right_word_vec + left_sib_vec + right_sib_vec
-        print 'pre position concat'
         input = concatenate([positionVec, subcat_lstm[0], subcat_lstm[1], subcat_lstm[2], subcat_lstm[3], concatenate(list(chain(*(feat_vecs))))])
-        print 'pre routput'
         if self.hidden2_units > 0:
             routput = (self.routLayer * self.activation(self.rhid2Bias + self.rhid2Layer * self.activation(
                 self.rhidLayer * input + self.rhidBias)) + self.routBias)
         else:
             routput = (self.routLayer * self.activation(self.rhidLayer * input + self.rhidBias) + self.routBias)
 
-        print 'pre output'
         if self.hidden2_units > 0:
             output = (self.outLayer * self.activation(
                 self.hid2Bias + self.hid2Layer * self.activation(self.hidLayer * input + self.hidBias)) + self.outBias)
@@ -339,7 +334,6 @@ class SRLLSTM:
                 predicate = sentence.predicates[p]
                 subcat_lstm = self.childrenLstms(sentence, predicate)
                 for arg in range(1, len(sentence.entries)):
-                    print 'arg',arg
                     scores = self.__evaluate(sentence, predicate, arg, subcat_lstm)
                     best = max(chain(*scores), key=itemgetter(2))
                     gold = sentence.entries[arg].predicateList[p]
