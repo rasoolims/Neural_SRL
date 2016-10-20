@@ -243,13 +243,13 @@ class SRLLSTM:
             root.vec = concatenate([root.bfvec, root.bbvec])
 
 
-    def childrenLstms(self, sentence, predicate):
+    def childrenLstms(self, sentence):
         for root in sentence:
             forward = self.childsetLSTMs[0].initial_state()
             backward = self.childsetLSTMs[1].initial_state()
             fvecs = []
             bvecs = []
-            for froot, rroot in zip(sentence.rev_heads[predicate], reversed(sentence.rev_heads[predicate])):
+            for froot, rroot in zip(sentence.rev_heads[root.id], reversed(sentence.rev_heads[root.id])):
                 fword = sentence.entries[froot]
                 rword = sentence.entries[rroot]
                 fdepvec = lookup(self.depRelEmbedding, int(self.deprels[fword.relation]))
@@ -260,12 +260,12 @@ class SRLLSTM:
                 bvecs.append(backward.output())
 
             vecs = []
-            for i in range(len(sentence.rev_heads[predicate])):
+            for i in range(len(sentence.rev_heads[root.id])):
                 vecs.append(concatenate([fvecs[i],  bvecs[len(bvecs)-i-1]]))
 
             bforward = self.bchildsetLSTMs[0].initial_state()
             bbackward = self.bchildsetLSTMs[1].initial_state()
-            for i in range(len(sentence.rev_heads[predicate])):
+            for i in range(len(sentence.rev_heads[root.id])):
                 bforward = bforward.add_input(vecs[i])
                 bbackward = bbackward.add_input(vecs[len(bvecs)-i-1])
             root.childLstms = concatenate([bforward.output(), bbackward.output()])
@@ -276,6 +276,8 @@ class SRLLSTM:
             self.getWordEmbeddings(sentence.entries, False)
             for root in sentence.entries:
                 root.lstms = [root.vec for _ in xrange(self.nnvecs)]
+            self.childrenLstms(sentence.entries)
+            for root in sentence.entries:
                 root.childLstms  = [root.childLstms for _ in xrange(self.nnvecs)]
             for p in range(len(sentence.predicates)):
                 predicate = sentence.predicates[p]
@@ -312,10 +314,11 @@ class SRLLSTM:
             self.getWordEmbeddings(sentence.entries, True)
             for root in sentence.entries:
                 root.lstms = [root.vec for _ in xrange(self.nnvecs)]
+            self.childrenLstms(sentence.entries)
+            for root in sentence.entries:
                 root.childLstms = [root.childLstms for _ in xrange(self.nnvecs)]
             for p in range(1, len(sentence.predicates)):
                 predicate = sentence.predicates[p]
-                subcat_lstm = self.childrenLstms(sentence, predicate)
                 for arg in range(1, len(sentence.entries)):
                     scores = self.__evaluate(sentence, predicate, arg)
                     best = max(chain(*scores), key=itemgetter(2))
