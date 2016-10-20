@@ -292,7 +292,7 @@ class SRLLSTM:
         for i in range(len(sentence.rev_heads[predicate])):
             bforward = bforward.add_input(vecs[i])
             bbackward = bbackward.add_input(vecs[len(bvecs)-i-1])
-        return (bforward.output(), bbackward.output())
+        return [bforward.output(), bbackward.output()]
 
     def Predict(self, conll_path):
         for iSentence, sentence in enumerate(read_conll(conll_path)):
