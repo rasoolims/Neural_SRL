@@ -61,7 +61,6 @@ class SRLLSTM:
         self.blstmFlag = options.blstmFlag
         self.bibiFlag = options.bibiFlag
 
-        print 2*self.ldims + self.deprdims
         self.childsetLSTMs = [LSTMBuilder(1, 2*self.ldims + self.deprdims, self.ldims * 0.5, self.model),
                               LSTMBuilder(1, 2*self.ldims + self.deprdims, self.ldims * 0.5, self.model)]
         self.bchildsetLSTMs = [LSTMBuilder(1, self.ldims, self.ldims * 0.5, self.model),
@@ -117,6 +116,7 @@ class SRLLSTM:
             (2, self.hidden2_units if self.hidden2_units > 0 else self.hidden_units))
         self.outBias_ = self.model.add_parameters((2))
 
+        print self.ldims * self.nnvecs * self.k + self.positionDim
         self.rhidLayer_ = self.model.add_parameters(
             (self.hidden_units, self.ldims * self.nnvecs * self.k + self.positionDim))
         self.rhidBias_ = self.model.add_parameters((self.hidden_units))
