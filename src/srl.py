@@ -35,7 +35,7 @@ class SRLLSTM:
         self.headFlag = options.headFlag
         self.rlMostFlag = options.rlMostFlag
         self.rlFlag = options.rlFlag
-        self.k = 9
+        self.k = 10
         self.nnvecs = 2
 
         self.external_embedding = None
@@ -104,7 +104,6 @@ class SRLLSTM:
         self.word2lstmbias_ = self.model.add_parameters((self.ldims))
         self.lstm2lstm_ = self.model.add_parameters((self.ldims, self.ldims * self.nnvecs + self.rdims))
         self.lstm2lstmbias_ = self.model.add_parameters((self.ldims))
-        print self.ldims * self.nnvecs * self.k + self.positionDim
         self.hidLayer_ = self.model.add_parameters(
             (self.hidden_units, self.ldims * self.nnvecs * self.k + self.positionDim))
         self.hidBias_ = self.model.add_parameters((self.hidden_units))
@@ -116,7 +115,6 @@ class SRLLSTM:
             (2, self.hidden2_units if self.hidden2_units > 0 else self.hidden_units))
         self.outBias_ = self.model.add_parameters((2))
 
-        print self.ldims * self.nnvecs * self.k + self.positionDim
         self.rhidLayer_ = self.model.add_parameters(
             (self.hidden_units, self.ldims * self.nnvecs * self.k + self.positionDim))
         self.rhidBias_ = self.model.add_parameters((self.hidden_units))
