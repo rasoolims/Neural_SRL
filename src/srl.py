@@ -244,11 +244,9 @@ class SRLLSTM:
 
 
     def childrenLstms(self, sentence):
-        for root in sentence:
+        for root in sentence.entries:
             forward = self.childsetLSTMs[0].initial_state()
             backward = self.childsetLSTMs[1].initial_state()
-            fvecs = []
-            bvecs = []
             for froot, rroot in zip(sentence.rev_heads[root.id], reversed(sentence.rev_heads[root.id])):
                 fword = sentence.entries[froot]
                 rword = sentence.entries[rroot]
@@ -256,18 +254,22 @@ class SRLLSTM:
                 bdepvec = lookup(self.depRelEmbedding, int(self.deprels[rword.relation]))
                 forward = forward.add_input(concatenate([fdepvec, fword.lstms[0], fword.lstms[1]]))
                 backward = backward.add_input(concatenate([bdepvec,  rword.lstms[0], rword.lstms[1]]))
-                fvecs.append(forward.output())
-                bvecs.append(backward.output())
+                fword.f_head_vec = forward.output()
+                rword.b_head_vec = backward.output()
 
-            vecs = []
-            for i in range(len(sentence.rev_heads[root.id])):
-                vecs.append(concatenate([fvecs[i],  bvecs[len(bvecs)-i-1]]))
+            for dep in sentence.rev_heads[root.id]:
+                word = sentence.entries[dep]
+                word.head_vec = concatenate([word.f_head_vec, word.b_head_vec])
 
             bforward = self.bchildsetLSTMs[0].initial_state()
             bbackward = self.bchildsetLSTMs[1].initial_state()
-            for i in range(len(sentence.rev_heads[root.id])):
-                bforward = bforward.add_input(vecs[i])
-                bbackward = bbackward.add_input(vecs[len(bvecs)-i-1])
+            for froot, rroot in zip(sentence.rev_heads[root.id], reversed(sentence.rev_heads[root.id])):
+                fword = sentence.entries[froot]
+                rword = sentence.entries[rroot]
+                bforward = bforward.add_input(fword.head_vec)
+                bbackward = bbackward.add_input(rword.head_vec)
+                fword.bf_head_vec = bforward.output()
+                rword.bb_head_vec = bbackward.output()
             root.childLstms = concatenate([bforward.output(), bbackward.output()])
 
     def Predict(self, conll_path):
@@ -276,7 +278,7 @@ class SRLLSTM:
             self.getWordEmbeddings(sentence.entries, False)
             for root in sentence.entries:
                 root.lstms = [root.vec for _ in xrange(self.nnvecs)]
-            self.childrenLstms(sentence.entries)
+            self.childrenLstms(sentence)
             for root in sentence.entries:
                 root.childLstms  = [root.childLstms for _ in xrange(self.nnvecs)]
             for p in range(len(sentence.predicates)):
@@ -312,9 +314,9 @@ class SRLLSTM:
                 etotal = 0
                 lerrors = 0
             self.getWordEmbeddings(sentence.entries, True)
-            for root in sentence.entries:
+            for root in sentence.entries: #todo why twice?
                 root.lstms = [root.vec for _ in xrange(self.nnvecs)]
-            self.childrenLstms(sentence.entries)
+            self.childrenLstms(sentence)
             for root in sentence.entries:
                 root.childLstms = [root.childLstms for _ in xrange(self.nnvecs)]
             for p in range(1, len(sentence.predicates)):

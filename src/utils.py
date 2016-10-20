@@ -74,6 +74,7 @@ class ConllEntry:
         self.sense = sense
         self.lstms = None
         self.childLstms = None
+        self.head_vec = None # this is used for head vector
 
     def __str__(self):
         entry_list = [str(self.id), self.form, self.lemma, self.lemma, self.pos, self.pos, '_', '_',
