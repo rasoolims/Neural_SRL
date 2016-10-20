@@ -2,7 +2,7 @@ from dynet import *
 from utils import read_conll
 from operator import itemgetter
 from itertools import chain
-import utils, time, random
+import utils, time, random, operator
 import numpy as np
 
 
@@ -36,7 +36,7 @@ class SRLLSTM:
         self.rlMostFlag = options.rlMostFlag
         self.rlFlag = options.rlFlag
         self.k = 8
-        self.nnvecs = 2
+        self.positionDim = 2
 
         self.external_embedding = None
         if options.external_embedding is not None:
@@ -59,8 +59,8 @@ class SRLLSTM:
 
         dims = self.wdims + self.lemDims + self.pdims + (self.edim if self.external_embedding is not None else 0)
 
-        self.childsetLSTMs = [LSTMBuilder(1, 2*self.ldims + self.deprdims, self.ldims * 0.5, self.model),
-                              LSTMBuilder(1, 2*self.ldims + self.deprdims, self.ldims * 0.5, self.model)]
+        self.childsetLSTMs = [LSTMBuilder(1, self.ldims + self.deprdims + self.positionDim, self.ldims * 0.5, self.model),
+                              LSTMBuilder(1, self.ldims + self.deprdims + self.positionDim, self.ldims * 0.5, self.model)]
         self.bchildsetLSTMs = [LSTMBuilder(1, self.ldims, self.ldims * 0.5, self.model),
                               LSTMBuilder(1, self.ldims, self.ldims * 0.5, self.model)]
         self.surfaceBuilders = [LSTMBuilder(1, dims, self.ldims * 0.5, self.model),
@@ -81,7 +81,6 @@ class SRLLSTM:
         self.lemmas['*INITIAL*'] = 2
         self.deprels['*INITIAL*'] = 2
 
-        self.positionDim = 2
         self.wordEmbeddings = self.model.add_lookup_parameters((len(words) + 3, self.wdims))
         self.lemmaEmbeddings = self.model.add_lookup_parameters((len(lemmas) + 3, self.lemDims))
         self.posEmbedding = self.model.add_lookup_parameters((len(pos) + 3, self.pdims))
@@ -94,7 +93,7 @@ class SRLLSTM:
         self.edim if self.external_embedding is not None else 0)))
         self.word2lstmbias_ = self.model.add_parameters((self.ldims))
         self.hidLayer_ = self.model.add_parameters(
-            (self.hidden_units, self.ldims * self.nnvecs * self.k + self.positionDim))
+            (self.hidden_units, self.ldims * self.k + self.positionDim))
         self.hidBias_ = self.model.add_parameters((self.hidden_units))
 
         self.hid2Layer_ = self.model.add_parameters((self.hidden2_units, self.hidden_units))
@@ -105,7 +104,7 @@ class SRLLSTM:
         self.outBias_ = self.model.add_parameters((2))
 
         self.rhidLayer_ = self.model.add_parameters(
-            (self.hidden_units, self.ldims * self.nnvecs * self.k + self.positionDim))
+            (self.hidden_units, self.ldims  * self.k + self.positionDim))
         self.rhidBias_ = self.model.add_parameters((self.hidden_units))
 
         self.rhid2Layer_ = self.model.add_parameters((self.hidden2_units, self.hidden_units))
@@ -197,7 +196,7 @@ class SRLLSTM:
         paddingVec = tanh(
             self.word2lstm * concatenate(
                 filter(None, [paddingWordVec, paddingLemmaVec, paddingPosVec, evec])) + self.word2lstmbias)
-        self.empty = paddingVec if self.nnvecs == 1 else concatenate([paddingVec for _ in xrange(self.nnvecs)])
+        self.empty = paddingVec
 
     def getWordEmbeddings(self, sentence, train):
         for root in sentence:
@@ -206,6 +205,7 @@ class SRLLSTM:
             root.wordvec = lookup(self.wordEmbeddings, int(self.vocab.get(root.norm, 0)) if dropFlag else 0)
             root.lemmaVec = lookup(self.lemmaEmbeddings, int(self.lemmas.get(root.lemmaNorm, 0)) if dropFlag else 0)
             root.posvec = lookup(self.posEmbedding, int(self.pos[root.pos])) if self.pdims > 0 else None
+            root.depvec = lookup(self.depRelEmbedding, int(self.deprels[root.relation]))
 
             if self.external_embedding is not None:
                 if not dropFlag and random.random() < 0.5:
@@ -245,42 +245,53 @@ class SRLLSTM:
 
     def childrenLstms(self, sentence):
         for root in sentence.entries:
+            deps = sorted(list(sentence.rev_heads[root.id]) + [root.id])
             forward = self.childsetLSTMs[0].initial_state()
             backward = self.childsetLSTMs[1].initial_state()
-            for froot, rroot in zip(sentence.rev_heads[root.id], reversed(sentence.rev_heads[root.id])):
+            for froot, rroot in zip(deps, reversed(deps)):
+                fposition = 0 if froot == root.id else 1 if froot > root.id else 2
+                bposition = 0 if rroot == root.id else 1 if rroot > root.id else 2
+                fpositionVec = lookup(self.positionEmbeddings, fposition)
+                bpositionVec = lookup(self.positionEmbeddings, bposition)
                 fword = sentence.entries[froot]
                 rword = sentence.entries[rroot]
-                fdepvec = lookup(self.depRelEmbedding, int(self.deprels[fword.relation]))
-                bdepvec = lookup(self.depRelEmbedding, int(self.deprels[rword.relation]))
-                forward = forward.add_input(concatenate([fdepvec, fword.lstms[0], fword.lstms[1]]))
-                backward = backward.add_input(concatenate([bdepvec,  rword.lstms[0], rword.lstms[1]]))
-                fword.f_head_vec = forward.output()
-                rword.b_head_vec = backward.output()
+                forward = forward.add_input(concatenate([fpositionVec, fword.depvec, fword.lstms]))
+                backward = backward.add_input(concatenate([bpositionVec, rword.depvec, rword.lstms]))
 
-            for dep in sentence.rev_heads[root.id]:
+                if froot != root.id: fword.f_head_vec = forward.output()
+                else: fword.f_own_vec = forward.output()
+                if rroot != root.id: rword.b_head_vec = backward.output()
+                else: rword.b_own_vec = backward.output()
+
+            for dep in deps:
                 word = sentence.entries[dep]
-                word.head_vec = concatenate([word.f_head_vec, word.b_head_vec])
+                if dep == root.id:
+                    word.own_vec = concatenate([word.f_own_vec, word.b_own_vec])
+                else:
+                    word.head_vec = concatenate([word.f_head_vec, word.b_head_vec])
 
             bforward = self.bchildsetLSTMs[0].initial_state()
             bbackward = self.bchildsetLSTMs[1].initial_state()
-            for froot, rroot in zip(sentence.rev_heads[root.id], reversed(sentence.rev_heads[root.id])):
+            for froot, rroot in zip(deps, reversed(deps)):
                 fword = sentence.entries[froot]
                 rword = sentence.entries[rroot]
-                bforward = bforward.add_input(fword.head_vec)
-                bbackward = bbackward.add_input(rword.head_vec)
-                fword.bf_head_vec = bforward.output()
-                rword.bb_head_vec = bbackward.output()
-            root.childLstms = concatenate([bforward.output(), bbackward.output()])
+                if froot != root.id: bforward = bforward.add_input(fword.head_vec)
+                else: bforward.add_input(fword.own_vec)
+                if rroot != root.id: bbackward = bbackward.add_input(rword.head_vec)
+                else: bbackward.add_input(rword.own_vec)
+                if froot != root.id: fword.bf_head_vec = bforward.output()
+                else: fword.bf_own_vec = bforward.output()
+                if rroot != root.id: rword.bb_head_vec = bbackward.output()
+                else: rword.bb_own_vec = bbackward.output()
+            root.ch_vec = concatenate([bforward.output(), bbackward.output()])
 
     def Predict(self, conll_path):
         for iSentence, sentence in enumerate(read_conll(conll_path)):
             self.Init()
             self.getWordEmbeddings(sentence.entries, False)
             for root in sentence.entries:
-                root.lstms = [root.vec for _ in xrange(self.nnvecs)]
+                root.lstms = root.vec
             self.childrenLstms(sentence)
-            for root in sentence.entries:
-                root.childLstms  = [root.childLstms for _ in xrange(self.nnvecs)]
             for p in range(len(sentence.predicates)):
                 predicate = sentence.predicates[p]
                 for arg in range(1, len(sentence.entries)):
@@ -314,11 +325,11 @@ class SRLLSTM:
                 etotal = 0
                 lerrors = 0
             self.getWordEmbeddings(sentence.entries, True)
-            for root in sentence.entries: #todo why twice?
-                root.lstms = [root.vec for _ in xrange(self.nnvecs)]
+            for root in sentence.entries:
+                root.lstms = root.vec
             self.childrenLstms(sentence)
             for root in sentence.entries:
-                root.childLstms = [root.childLstms for _ in xrange(self.nnvecs)]
+                root.childLstms = root.ch_vec
             for p in range(1, len(sentence.predicates)):
                 predicate = sentence.predicates[p]
                 for arg in range(1, len(sentence.entries)):
