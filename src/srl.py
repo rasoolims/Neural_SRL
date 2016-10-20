@@ -35,7 +35,7 @@ class SRLLSTM:
         self.headFlag = options.headFlag
         self.rlMostFlag = options.rlMostFlag
         self.rlFlag = options.rlFlag
-        self.k = 8
+        self.k = 9
         self.nnvecs = 2
 
         self.external_embedding = None
@@ -161,7 +161,7 @@ class SRLLSTM:
         print 'pre-feat-vec'
         feat_vecs =  pred_vec + arg_vec + pred_head_vec + arg_head_vec + left_word_vec + right_word_vec + left_sib_vec + right_sib_vec
         print 'pre position concat'
-        input = concatenate([positionVec, subcat_lstm[0], subcat_lstm[1], concatenate(list(chain(*(feat_vecs))))])
+        input = concatenate([positionVec,concatenate(list(chain(*(feat_vecs))))])
         print 'pre routput'
         if self.hidden2_units > 0:
             routput = (self.routLayer * self.activation(self.rhid2Bias + self.rhid2Layer * self.activation(
