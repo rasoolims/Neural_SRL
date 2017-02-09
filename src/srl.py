@@ -139,13 +139,14 @@ class SRLLSTM:
                 v_i = bilstms[arg_index]
                 cand = concatenate([v_i, v_p])
                 u_l = self.u_l[pred_lemma_index]
-                score_vector = []
+                ws = []
                 for role in xrange(len(self.roles)):
                     v_r = self.v_r[role]
                     w_l_r = rectify(U * (concatenate([u_l, v_r])))
-                    score_vector.append(dot_product(w_l_r, cand))
-
-                err = pickneglogsoftmax(concatenate(score_vector[:]), gold_role)
+                    ws.append(w_l_r)
+                W = transpose(concatenate_cols([w for w in ws]))
+                scores = W*cand
+                err = pickneglogsoftmax(scores, gold_role)
                 errs.append(err)
         return errs
 
