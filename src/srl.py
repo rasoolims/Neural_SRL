@@ -191,9 +191,9 @@ class SRLLSTM:
                 for sen in sentences:
                     errs += self.buildGraph(sen, pad_s)
 
-                eerrs = esum(errs)
-                loss += eerrs.scalar_value()
-                eerrs.backward()
+                sum_errs = esum(errs)
+                loss += sum_errs.scalar_value()
+                sum_errs.backward()
                 self.trainer.update()
                 renew_cg()
                 print 'loss:', loss / len(errs), 'time:', time.time() - start, 'max_len', pad_s, 'instances',len(errs)
