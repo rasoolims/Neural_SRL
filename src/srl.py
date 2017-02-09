@@ -1,6 +1,7 @@
 from dynet import *
 from utils import read_conll
 import time, random
+import numpy as np
 
 class SRLLSTM:
     def __init__(self, words, pos, roles, w2i, l2i, pl2i, options):
@@ -114,7 +115,7 @@ class SRLLSTM:
 
         return layer_inputs[-1]
 
-    def buildGraph(self, sentence, pad_len):
+    def buildGraph(self, sentence, pad_len, correct):
         errs = []
         bilstms = self.getBilstmFeatures(sentence.entries, True, pad_len)
         U = parameter(self.U)
@@ -139,9 +140,11 @@ class SRLLSTM:
                     ws.append(w_l_r)
                 W = transpose(concatenate_cols([w for w in ws]))
                 scores = softmax(W*cand)
+                if np.argmax(scores.npvalue()) == gold_role: correct+=1
+
                 err = pickneglogsoftmax(scores, gold_role)
                 errs.append(err)
-        return errs
+        return errs,correct
 
     def decode(self, sentence):
         bilstms = self.getBilstmFeatures(sentence.entries, False, len(sentence.entries))
@@ -175,6 +178,7 @@ class SRLLSTM:
         errs = []
         sentences = []
         loss = 0
+        corrects = 0
         for iSentence, sentence in enumerate(shuffledData):
             sentences.append(sentence)
             if len(sentences)>self.batch_size:
@@ -183,14 +187,14 @@ class SRLLSTM:
                     if len(sen.entries)>pad_s:
                         pad_s = len(sen.entries)
                 for sen in sentences:
-                    errs += self.buildGraph(sen, pad_s)
-
+                    e, corrects = self.buildGraph(sen, pad_s, corrects)
+                    errs+= e
                 sum_errs = esum(errs)
                 loss += sum_errs.scalar_value()
                 sum_errs.backward()
                 self.trainer.update()
                 renew_cg()
-                print 'loss:', loss / len(errs), 'time:', time.time() - start, 'max_len', pad_s, 'instances',len(errs)
+                print 'loss:', loss / len(errs), 'time:', time.time() - start, 'max_len', pad_s, 'instances',len(errs), 'correct', float(corrects)/len(errs)
                 errs = []
                 sentences = []
                 start = time.time()
@@ -200,7 +204,8 @@ class SRLLSTM:
                 if len(sen.entries) > pad_s:
                     pad_s = len(sen.entries)
             for sen in sentences:
-                errs += self.buildGraph(sen, pad_s)
+                e, corrects = self.buildGraph(sen, pad_s, corrects)
+                errs += e
             eerrs = esum(errs)
             eerrs.scalar_value()
             eerrs.backward()
