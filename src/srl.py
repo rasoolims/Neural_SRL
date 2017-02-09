@@ -138,8 +138,8 @@ class SRLLSTM:
                     v_r = self.v_r[role]
                     w_l_r = rectify(U * (concatenate([u_l, v_r])))
                     ws.append(w_l_r)
-                W = transpose(concatenate_cols([w for w in ws]))
-                scores = softmax(W*cand)
+                W = concatenate_cols([w for w in ws])
+                scores = softmax(transpose(cand*W))
                 if np.argmax(scores.npvalue()) == gold_role: correct+=1
 
                 err = pickneglogsoftmax(scores, gold_role)
@@ -194,10 +194,11 @@ class SRLLSTM:
                 sum_errs.backward()
                 self.trainer.update()
                 renew_cg()
-                print 'loss:', loss / len(errs), 'time:', time.time() - start, 'max_len', pad_s, 'instances',len(errs), 'correct', float(corrects)/len(errs)
+                print 'loss:', loss / len(errs), 'time:', time.time() - start, 'max_len', pad_s, 'instances',len(errs), 'correct', 100*float(corrects)/len(errs)
                 errs = []
                 sentences = []
                 corrects = 0
+                loss = 0
                 start = time.time()
 
         if len(sentences) > 0:
