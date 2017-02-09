@@ -1,10 +1,6 @@
 from dynet import *
 from utils import read_conll
-from operator import itemgetter
-from itertools import chain
-import utils, time, random, operator
-import numpy as np
-
+import time, random
 
 class SRLLSTM:
     def __init__(self, words, pos, roles, w2i, l2i, pl2i, options):
@@ -74,7 +70,7 @@ class SRLLSTM:
         # first extracting embedding features.
         for root in sentence:
             c = float(self.wordsCount.get(root.norm, 0))
-            dropFlag = not train or (random.random() < (c / (self.alpha + c)))
+            dropFlag = not train or (random.random() < 1.0 - (c / (self.alpha + c)))
             x_re.append(lookup(self.x_re, int(self.words.get(root.norm, 0)) if dropFlag else 0))
             x_le.append(lookup(self.x_le, int(self.lemmas.get(root.lemmaNorm, 0)) if dropFlag else 0))
             x_pos.append(lookup(self.x_pos, int(self.pos[root.pos])))
