@@ -226,6 +226,6 @@ class SRLLSTM:
     def Predict(self, conll_path):
         for iSentence, sentence in enumerate(read_conll(conll_path)):
             self.decode(sentence)
-            if iSentence + 1 % 100 == 0: sys.stdout.write(str(iSentence + 1) + '...')
+            if iSentence + 1 % 1 == 0: sys.stdout.write(str(iSentence + 1) + '...')
             renew_cg()
             yield sentence
