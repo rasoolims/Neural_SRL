@@ -206,7 +206,8 @@ class SRLLSTM:
                 if iters%10==0 and dev_path!='':
                     write_conll(model_path+'.txt', self.Predict(dev_path))
                     os.system('perl src/utils/eval.pl -g ' + dev_path + ' -s ' + model_path+'.txt' + ' > ' + model_path+'.eval &')
-                    print 'Finished predicting dev'
+                    print 'Finished predicting dev; time:', time.time() - start
+                start = time.time()
 
         if len(sentences) > 0:
             for sen in sentences:
@@ -226,6 +227,6 @@ class SRLLSTM:
     def Predict(self, conll_path):
         for iSentence, sentence in enumerate(read_conll(conll_path)):
             self.decode(sentence)
-            if iSentence + 1 % 1 == 0: sys.stdout.write(str(iSentence + 1) + '...')
+            if iSentence + 1 % 100 == 0: sys.stdout.write(str(iSentence + 1) + '...')
             renew_cg()
             yield sentence

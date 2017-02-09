@@ -27,7 +27,7 @@ class ConllEntry:
         self.is_pred = is_pred
 
     def __str__(self):
-        entry_list = [str(self.id), self.form, self.lemma, self.lemma, self.pos, self.pos, '_', '_',
+        entry_list = [str(self.id+1), self.form, self.lemma, self.lemma, self.pos, self.pos, '_', '_',
                       str(self.parent_id),
                       str(self.parent_id), self.relation, self.relation,
                       '_' if self.sense == '_' else 'Y',
@@ -89,7 +89,7 @@ def read_conll(fh):
 def write_conll(fn, conll_structs):
     with codecs.open(fn, 'w') as fh:
         for conll_struct in conll_structs:
-            for i in range(1, len(conll_struct.entries)):
+            for i in xrange(len(conll_struct.entries)):
                 entry = conll_struct.entries[i]
                 fh.write(str(entry))
                 fh.write('\n')
