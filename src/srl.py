@@ -159,17 +159,14 @@ class SRLLSTM:
                 v_i = bilstms[arg_index]
                 cand = concatenate([v_i, v_p])
                 u_l = self.u_l[pred_lemma_index]
-                best_role = '_'
-                max_score = -float('inf')
-                for r in self.roles.keys():
-                    role = self.roles[r]
+                ws = []
+                for role in xrange(len(self.roles)):
                     v_r = self.v_r[role]
                     w_l_r = rectify(U * (concatenate([u_l, v_r])))
-                    score = dot_product(w_l_r, cand).value()
-                    if score > max_score:
-                        max_score = score
-                        best_role = r
-                sentence.entries[arg_index].predicateList[p] = best_role
+                    ws.append(w_l_r)
+                W = transpose(concatenate_cols([w for w in ws]))
+                scores = W * cand
+                sentence.entries[arg_index].predicateList[p] = self.iroles[np.argmax(scores.npvalue())]
 
     def Train(self, conll_path, dev_path, model_path):
         start = time.time()
