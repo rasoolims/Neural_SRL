@@ -76,7 +76,7 @@ class SRLLSTM:
             x_pos.append(lookup(self.x_pos, int(self.pos[root.pos])))
             pred_bool.append(inputVector([1])) if root.is_pred else pred_bool.append(inputVector([0]))
             if self.external_embedding is not None:
-                if not dropFlag and random.random() < 0.5:
+                if dropFlag and random.random() < 0.5:
                     x_pe.append(lookup(self.x_pe, 0))
                 elif root.form in self.external_embedding:
                     x_pe.append(lookup(self.x_pe, self.x_pe_dict[root.form], update=True))
