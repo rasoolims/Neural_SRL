@@ -138,8 +138,8 @@ class SRLLSTM:
                     v_r = self.v_r[role]
                     w_l_r = rectify(U * (concatenate([u_l, v_r])))
                     ws.append(w_l_r)
-                W = concatenate_cols([w for w in ws])
-                scores = softmax(transpose(cand*W))
+                W = transpose(concatenate_cols([w for w in ws]))
+                scores = W*cand
                 if np.argmax(scores.npvalue()) == gold_role: correct+=1
 
                 err = pickneglogsoftmax(scores, gold_role)
