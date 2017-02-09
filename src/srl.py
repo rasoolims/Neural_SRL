@@ -91,14 +91,13 @@ class SRLLSTM:
             else:
                 x_pe.append(None)
 
-        ''' #todo
         for i in range(len(sentence), pad_length):
             x_re.append(lookup(self.x_re, 1))
             x_le.append(lookup(self.x_le, 1))
             x_pos.append(lookup(self.x_pos, 1))
             x_pe.append(lookup(self.x_pe, 1)) if self.x_pe else x_pe.append(None)
             pred_bool.append(inputVector([0]))
-        '''
+
         seq_input = [concatenate(filter(None, [x_re[i], x_pe[i], x_pos[i], x_le[i], pred_bool[i]])) for i in
                      xrange(len(x_re))]
         f_init, b_init = [b.initial_state() for b in self.deep_lstms[0]]
