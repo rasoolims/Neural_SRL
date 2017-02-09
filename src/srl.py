@@ -183,7 +183,7 @@ class SRLLSTM:
                     if len(sen.entries)>pad_s:
                         pad_s = len(sen.entries)
                 for sen in sentences:
-                    errs += self.buildGraph(sen, pad_s)
+                    errs += self.buildGraph(sen, len(sen.entries))
 
                 sum_errs = esum(errs)
                 loss += sum_errs.scalar_value()
@@ -200,7 +200,7 @@ class SRLLSTM:
                 if len(sen.entries) > pad_s:
                     pad_s = len(sen.entries)
             for sen in sentences:
-                errs += self.buildGraph(sen, pad_s)
+                errs += self.buildGraph(sen, len(sen.entries))
             eerrs = esum(errs)
             eerrs.scalar_value()
             eerrs.backward()
