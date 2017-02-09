@@ -48,7 +48,7 @@ if __name__ == '__main__':
         parser = SRLLSTM(words, pos, semRels, w2i, l2i, pl2i, options)
         for epoch in xrange(options.epochs):
             print 'Starting epoch', epoch
-            parser.Train(options.conll_train)
+            parser.Train(options.conll_train, options.conll_dev, os.path.join(options.outdir, options.model))
             devpath = os.path.join(options.outdir, 'dev_epoch_' + str(epoch + 1) + '.conll')
             if options.conll_dev!='':
                 utils.write_conll(devpath, parser.Predict(options.conll_dev))

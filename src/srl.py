@@ -1,6 +1,6 @@
 from dynet import *
-from utils import read_conll
-import time, random
+from utils import read_conll,write_conll
+import time, random, os
 import numpy as np
 
 class SRLLSTM:
@@ -171,7 +171,7 @@ class SRLLSTM:
                         best_role = r
                 sentence.entries[arg_index].predicateList[p] = best_role
 
-    def Train(self, conll_path):
+    def Train(self, conll_path, dev_path, model_path):
         start = time.time()
         shuffledData = list(read_conll(conll_path))
         random.shuffle(shuffledData)
@@ -179,6 +179,7 @@ class SRLLSTM:
         sentences = []
         loss = 0
         corrects = 0
+        iters = 0
         for iSentence, sentence in enumerate(shuffledData):
             sentences.append(sentence)
             if len(sentences)>self.batch_size:
@@ -199,7 +200,13 @@ class SRLLSTM:
                 sentences = []
                 corrects = 0
                 loss = 0
+
                 start = time.time()
+                iters+=1
+                if iters%10==0 and dev_path!='':
+                    write_conll(model_path+'.txt', self.Predict(dev_path))
+                    os.system('perl src/utils/eval.pl -g ' + dev_path + ' -s ' + model_path+'.txt' + ' > ' + model_path+'.eval &')
+                    print 'Finished predicting dev'
 
         if len(sentences) > 0:
             for sen in sentences:
