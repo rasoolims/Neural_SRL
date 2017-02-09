@@ -7,38 +7,28 @@ import numpy as np
 
 
 class SRLLSTM:
-    def __init__(self, words, lemmas, pos, depRels, rels, w2i, l2i, options):
+    def __init__(self, words, pos, roles, w2i, l2i, pl2i, options):
         self.model = Model()
-        self.trainer = AdamTrainer(self.model)
-        random.seed(1)
-
-        self.activations = {'tanh': tanh, 'sigmoid': logistic, 'relu': rectify,
-                            'tanh3': (lambda x: tanh(cwise_multiply(cwise_multiply(x, x), x)))}
-        self.activation = self.activations[options.activation]
-
-        self.oracle = options.oracle
-        self.ldims = options.lstm_dims * 2
-        self.wdims = options.wembedding_dims
-        self.lemDims = options.lem_embedding_dims
-        self.pdims = options.pembedding_dims
-        self.deprdims = options.deprembedding_dims
-        self.rdims = options.rembedding_dims
-        self.layers = options.lstm_layers
+        self.batch_size = options.batch
+        self.trainer = AdamTrainer(self.model, options.learning_rate)
         self.wordsCount = words
-        self.vocab = {word: ind + 3 for word, ind in w2i.iteritems()}
+        self.words = {word: ind + 3 for word, ind in w2i.iteritems()}
         self.lemmas = {lemma: ind + 3 for lemma, ind in l2i.iteritems()}
+        self.pred_lemmas = {pl: ind + 3 for pl, ind in pl2i.iteritems()}
         self.pos = {word: ind + 3 for ind, word in enumerate(pos)}
-        self.deprels = {word: ind for ind, word in enumerate(depRels)}
-        self.rels = {word: ind for ind, word in enumerate(rels)}
-        self.irels = rels
-
-        self.headFlag = options.headFlag
-        self.rlMostFlag = options.rlMostFlag
-        self.rlFlag = options.rlFlag
-        self.k = 9
-        self.positionDim = 2
+        self.roles = {word: ind for ind, word in enumerate(roles)}
+        self.iroles = roles
+        self.d_w = options.d_w
+        self.d_pos = options.d_pos
+        self.d_l = options.d_l
+        self.d_h = options.d_h
+        self.d_r = options.d_r
+        self.d_prime_l = options.d_prime_l
+        self.k = options.k
+        self.alpha = options.alpha
 
         self.external_embedding = None
+        self.x_pe = None
         if options.external_embedding is not None:
             external_embedding_fp = open(options.external_embedding, 'r')
             external_embedding_fp.readline()
@@ -48,121 +38,30 @@ class SRLLSTM:
 
             self.edim = len(self.external_embedding.values()[0])
             self.noextrn = [0.0 for _ in xrange(self.edim)]
-            self.extrnd = {word: i + 3 for i, word in enumerate(self.external_embedding)}
-            self.extrn = self.model.add_lookup_parameters((len(self.external_embedding) + 3, self.edim))
-            for word, i in self.extrnd.iteritems():
-                self.extrn.init_row(i, self.external_embedding[word])
-            self.extrnd['*PAD*'] = 1
-            self.extrnd['*INITIAL*'] = 2
+            self.x_pe_dict = {word: i + 3 for i, word in enumerate(self.external_embedding)}
+            self.x_pe = self.model.add_lookup_parameters((len(self.external_embedding) + 3, self.edim))
+            for word, i in self.x_pe_dict.iteritems():
+                self.x_pe.init_row(i, self.external_embedding[word])
+            self.x_pe_dict['*PAD*'] = 1
+            self.x_pe_dict['*INITIAL*'] = 2
 
             print 'Load external embedding. Vector dimensions', self.edim
 
-        dims = self.wdims + self.lemDims + self.pdims + (self.edim if self.external_embedding is not None else 0)
+        self.inp_dim = self.d_w + self.d_l + self.d_pos + (
+        self.edim if self.external_embedding is not None else 0) + 1  # 1 for predicate indicator
 
-        self.childsetLSTMs = [LSTMBuilder(1, self.ldims + self.deprdims + self.positionDim, self.ldims * 0.5, self.model),
-                              LSTMBuilder(1, self.ldims + self.deprdims + self.positionDim, self.ldims * 0.5, self.model)]
-        self.bchildsetLSTMs = [LSTMBuilder(1, self.ldims, self.ldims * 0.5, self.model),
-                              LSTMBuilder(1, self.ldims, self.ldims * 0.5, self.model)]
-        self.surfaceBuilders = [LSTMBuilder(1, dims, self.ldims * 0.5, self.model),
-                                LSTMBuilder(1, dims, self.ldims * 0.5, self.model)]
-        self.bsurfaceBuilders = [LSTMBuilder(1, self.ldims, self.ldims * 0.5, self.model),
-                                 LSTMBuilder(1, self.ldims, self.ldims * 0.5, self.model)]
+        # k-layered bilstm
+        self.deep_lstms = [[LSTMBuilder(1, self.inp_dim, self.d_h, self.model),
+                            LSTMBuilder(1, self.inp_dim, self.d_h, self.model)]] \
+                          + [[LSTMBuilder(1, self.d_h * 2, self.d_h, self.model),
+                              LSTMBuilder(1, self.d_h * 2, self.d_h, self.model)] for i in xrange(self.k - 1)]
 
-
-        self.hidden_units = options.hidden_units
-        self.hidden2_units = options.hidden2_units
-        self.vocab['*PAD*'] = 1
-        self.pos['*PAD*'] = 1
-        self.lemmas['*PAD*'] = 1
-        self.deprels['*PAD*'] = 1
-
-        self.vocab['*INITIAL*'] = 2
-        self.pos['*INITIAL*'] = 2
-        self.lemmas['*INITIAL*'] = 2
-        self.deprels['*INITIAL*'] = 2
-
-        self.wordEmbeddings = self.model.add_lookup_parameters((len(words) + 3, self.wdims))
-        self.lemmaEmbeddings = self.model.add_lookup_parameters((len(lemmas) + 3, self.lemDims))
-        self.posEmbedding = self.model.add_lookup_parameters((len(pos) + 3, self.pdims))
-        self.depRelEmbedding = self.model.add_lookup_parameters((len(depRels), self.deprdims))
-        self.semRelEmbedding = self.model.add_lookup_parameters((len(rels), self.rdims))
-        self.positionEmbeddings = self.model.add_lookup_parameters((3, self.positionDim)) # showing the actual position.
-
-        self.word2lstm_ = self.model.add_parameters((self.ldims, self.wdims + self.lemDims + self.pdims + (
-        self.edim if self.external_embedding is not None else 0)))
-        self.word2lstmbias_ = self.model.add_parameters((self.ldims))
-        self.hidLayer_ = self.model.add_parameters((self.hidden_units, self.ldims * self.k + self.positionDim))
-        self.hidBias_ = self.model.add_parameters((self.hidden_units))
-
-        self.hid2Layer_ = self.model.add_parameters((self.hidden2_units, self.hidden_units))
-        self.hid2Bias_ = self.model.add_parameters((self.hidden2_units))
-
-        self.outLayer_ = self.model.add_parameters(
-            (2, self.hidden2_units if self.hidden2_units > 0 else self.hidden_units))
-        self.outBias_ = self.model.add_parameters((2))
-
-        self.rhidLayer_ = self.model.add_parameters(
-            (self.hidden_units, self.ldims  * self.k + self.positionDim))
-        self.rhidBias_ = self.model.add_parameters((self.hidden_units))
-
-        self.rhid2Layer_ = self.model.add_parameters((self.hidden2_units, self.hidden_units))
-        self.rhid2Bias_ = self.model.add_parameters((self.hidden2_units))
-
-        self.routLayer_ = self.model.add_parameters(
-            (2 * (len(self.irels) + 0) + 1, self.hidden2_units if self.hidden2_units > 0 else self.hidden_units))
-        self.routBias_ = self.model.add_parameters((2 * (len(self.irels) + 0) + 1))
-
-        self.word2lstm = parameter(self.word2lstm_)
-        self.word2lstmbias = parameter(self.word2lstmbias_)
-        self.hidLayer = parameter(self.hidLayer_)
-        self.hidBias = parameter(self.hidBias_)
-        self.hid2Layer = parameter(self.hid2Layer_)
-        self.hid2Bias = parameter(self.hid2Bias_)
-        self.outLayer = parameter(self.outLayer_)
-        self.outBias = parameter(self.outBias_)
-        self.rhidLayer = parameter(self.rhidLayer_)
-        self.rhidBias = parameter(self.rhidBias_)
-        self.rhid2Layer = parameter(self.rhid2Layer_)
-        self.rhid2Bias = parameter(self.rhid2Bias_)
-        self.routLayer = parameter(self.routLayer_)
-        self.routBias = parameter(self.routBias_)
-
-    def __evaluate(self, sentence, pred_index, arg_index):
-        pred_vec = sentence.entries[pred_index].lstms
-        subcat_vec = sentence.entries[pred_index].childLstms
-        arg_vec = sentence.entries[arg_index].lstms
-        pred_head = sentence.head(pred_index)
-        pred_head_vec = sentence.entries[pred_head].lstms if pred_head >= 0 else self.empty
-        arg_head = sentence.head(arg_index)
-        arg_head_vec = sentence.entries[arg_head].lstms if arg_head >= 0 else self.empty
-        left_word_vec = sentence.entries[arg_index - 1].lstms if arg_index > 1 else self.empty
-        right_word_vec = sentence.entries[arg_index + 1].lstms if arg_index + 1 < len(sentence) else self.empty
-        (left_sibling, right_sibling) = sentence.left_right_siblings(arg_index)
-        left_sib_vec = sentence.entries[left_sibling].lstms if left_sibling >= 0 else self.empty
-        right_sib_vec = sentence.entries[right_sibling].lstms if right_sibling >= 0 else self.empty
-        position = 0 if arg_index == pred_index else 1 if arg_index > pred_index else 2
-        positionVec = lookup(self.positionEmbeddings, position)
-        input = concatenate([positionVec,subcat_vec, pred_vec , arg_vec , pred_head_vec , arg_head_vec , left_word_vec , right_word_vec , left_sib_vec , right_sib_vec])
-        if self.hidden2_units > 0:
-            routput = (self.routLayer * self.activation(self.rhid2Bias + self.rhid2Layer * self.activation(
-                self.rhidLayer * input + self.rhidBias)) + self.routBias)
-        else:
-            routput = (self.routLayer * self.activation(self.rhidLayer * input + self.rhidBias) + self.routBias)
-
-        if self.hidden2_units > 0:
-            output = (self.outLayer * self.activation(
-                self.hid2Bias + self.hid2Layer * self.activation(self.hidLayer * input + self.hidBias)) + self.outBias)
-        else:
-            output = (self.outLayer * self.activation(self.hidLayer * input + self.hidBias) + self.outBias)
-
-        scrs, uscrs = routput.value(), output.value()
-
-        uscrs0 = uscrs[0]
-        uscrs1 = uscrs[1]
-        output0 = output[0]
-        output1 = output[1]
-        return [[(rel, 0, scrs[1 + j * 2] + uscrs1, routput[1 + j * 2] + output1) for j, rel in enumerate(self.irels)],
-                [('_', 1, scrs[0] + uscrs0, routput[0] + output0)]]
+        self.x_re = self.model.add_lookup_parameters((len(self.words) + 3, self.d_w))
+        self.x_le = self.model.add_lookup_parameters((len(self.lemmas) + 3, self.d_l))
+        self.x_pos = self.model.add_lookup_parameters((len(pos) + 3, self.d_pos))
+        self.u_l = self.model.add_lookup_parameters((len(self.pred_lemmas) + 3, self.d_prime_l))
+        self.v_r = self.model.add_lookup_parameters((len(self.roles), self.d_r))
+        self.U = self.model.add_parameters((self.d_h * 4, self.d_r + self.d_prime_l))
 
     def Save(self, filename):
         self.model.save(filename)
@@ -170,193 +69,159 @@ class SRLLSTM:
     def Load(self, filename):
         self.model.load(filename)
 
-    def Init(self):
-        self.word2lstm = parameter(self.word2lstm_)
-        self.word2lstmbias = parameter(self.word2lstmbias_)
-        self.hidLayer = parameter(self.hidLayer_)
-        self.hidBias = parameter(self.hidBias_)
-        self.hid2Layer = parameter(self.hid2Layer_)
-        self.hid2Bias = parameter(self.hid2Bias_)
-        self.outLayer = parameter(self.outLayer_)
-        self.outBias = parameter(self.outBias_)
-        self.rhidLayer = parameter(self.rhidLayer_)
-        self.rhidBias = parameter(self.rhidBias_)
-        self.rhid2Layer = parameter(self.rhid2Layer_)
-        self.rhid2Bias = parameter(self.rhid2Bias_)
-        self.routLayer = parameter(self.routLayer_)
-        self.routBias = parameter(self.routBias_)
+    def getBilstmFeatures(self, sentence, train, pad_length):
+        x_re, x_pe, x_pos, x_le, pred_bool = [], [], [], [], []
 
-        evec = lookup(self.extrn, 1) if self.external_embedding is not None else None
-        paddingWordVec = lookup(self.wordEmbeddings, 1)
-        paddingLemmaVec = lookup(self.lemmaEmbeddings, 1)
-        paddingPosVec = lookup(self.posEmbedding, 1)
-        paddingVec = tanh(
-            self.word2lstm * concatenate(
-                filter(None, [paddingWordVec, paddingLemmaVec, paddingPosVec, evec])) + self.word2lstmbias)
-        self.empty = paddingVec
-
-    def getWordEmbeddings(self, sentence, train):
+        # first extracting embedding features.
         for root in sentence:
             c = float(self.wordsCount.get(root.norm, 0))
-            dropFlag = not train or (random.random() < (c / (0.25 + c)))
-            root.wordvec = lookup(self.wordEmbeddings, int(self.vocab.get(root.norm, 0)) if dropFlag else 0)
-            root.lemmaVec = lookup(self.lemmaEmbeddings, int(self.lemmas.get(root.lemmaNorm, 0)) if dropFlag else 0)
-            root.posvec = lookup(self.posEmbedding, int(self.pos[root.pos])) if self.pdims > 0 else None
-            root.depvec = lookup(self.depRelEmbedding, int(self.deprels[root.relation]))
-
+            dropFlag = not train or (random.random() < (c / (self.alpha + c)))
+            x_re.append(lookup(self.x_re, int(self.words.get(root.norm, 0)) if dropFlag else 0))
+            x_le.append(lookup(self.x_le, int(self.lemmas.get(root.lemmaNorm, 0)) if dropFlag else 0))
+            x_pos.append(lookup(self.x_pos, int(self.pos[root.pos])))
+            pred_bool.append(inputVector([1])) if root.is_pred else pred_bool.append(inputVector([0]))
             if self.external_embedding is not None:
                 if not dropFlag and random.random() < 0.5:
-                    root.evec = lookup(self.extrn, 0)
+                    x_pe.append(lookup(self.x_pe, 0))
                 elif root.form in self.external_embedding:
-                    root.evec = lookup(self.extrn, self.extrnd[root.form], update=True)
+                    x_pe.append(lookup(self.x_pe, self.x_pe_dict[root.form], update=True))
                 elif root.norm in self.external_embedding:
-                    root.evec = lookup(self.extrn, self.extrnd[root.norm], update=True)
+                    x_pe.append(lookup(self.x_pe, self.x_pe_dict[root.norm], update=True))
                 else:
-                    root.evec = lookup(self.extrn, 0)
+                    x_pe.append(lookup(self.x_pe, 0))
             else:
-                root.evec = None
-            root.ivec = concatenate(filter(None, [root.wordvec, root.lemmaVec, root.posvec, root.evec]))
+                x_pe.append(None)
 
-        forward = self.surfaceBuilders[0].initial_state()
-        backward = self.surfaceBuilders[1].initial_state()
+        for i in range(len(sentence), pad_length):
+            x_re.append(lookup(self.x_re, 1))
+            x_le.append(lookup(self.x_le, 1))
+            x_pos.append(lookup(self.x_pos, 1))
+            x_pe.append(lookup(self.x_pe, 1)) if self.x_pe else x_pe.append(None)
+            pred_bool.append(inputVector([0]))
 
-        for froot, rroot in zip(sentence, reversed(sentence)):
-            forward = forward.add_input(froot.ivec)
-            backward = backward.add_input(rroot.ivec)
-            froot.fvec = forward.output()
-            rroot.bvec = backward.output()
-        for root in sentence:
-            root.vec = concatenate([root.fvec, root.bvec])
+        seq_input = [concatenate(filter(None, [x_re[i], x_pe[i], x_pos[i], x_le[i], pred_bool[i]])) for i in
+                     xrange(len(x_re))]
+        f_init, b_init = [b.initial_state() for b in self.deep_lstms[0]]
+        fw = [x.output() for x in f_init.add_inputs(seq_input)]
+        bw = [x.output() for x in b_init.add_inputs(reversed(seq_input))]
+        layer_inputs = []
+        input_0 = []
+        for i in xrange(len(x_re)):
+            input_0.append(concatenate(filter(None, [fw[i], bw[len(x_re) - 1 - i]])))
+        layer_inputs.append(input_0)
 
-        bforward = self.bsurfaceBuilders[0].initial_state()
-        bbackward = self.bsurfaceBuilders[1].initial_state()
+        for i in xrange(self.k - 1):
+            f_init_i, b_init_i = [b.initial_state() for b in self.deep_lstms[i + 1]]
+            fw_i = [x.output() for x in f_init_i.add_inputs(layer_inputs[-1])]
+            bw_i = [x.output() for x in b_init_i.add_inputs(reversed(layer_inputs[-1]))]
+            input_i = []
+            for j in xrange(len(x_re)):
+                input_i.append(concatenate(filter(None, [fw_i[j], bw_i[len(x_re) - 1 - j]])))
+            layer_inputs.append(input_i)
 
-        for froot, rroot in zip(sentence, reversed(sentence)):
-            bforward = bforward.add_input(froot.vec)
-            bbackward = bbackward.add_input(rroot.vec)
-            froot.bfvec = bforward.output()
-            rroot.bbvec = bbackward.output()
-        for root in sentence:
-            root.lstms = concatenate([root.bfvec, root.bbvec])
+        return layer_inputs[-1]
 
+    def buildGraph(self, sentence, pad_len):
+        errs = []
+        bilstms = self.getBilstmFeatures(sentence.entries, True, pad_len)
+        U = parameter(self.U)
+        for p in xrange(len(sentence.predicates)):
+            pred_index = sentence.predicates[p]
+            c = float(self.wordsCount.get(sentence.entries[pred_index].norm, 0))
+            dropFlag = random.random() < (c / (self.alpha + c))
 
-    def childrenLstms(self, sentence):
-        for root in sentence.entries:
-            deps = sorted(list(sentence.rev_heads[root.id]) + [root.id])
-            forward = self.childsetLSTMs[0].initial_state()
-            backward = self.childsetLSTMs[1].initial_state()
-            for froot, rroot in zip(deps, reversed(deps)):
-                fposition = 0 if froot == root.id else 1 if froot > root.id else 2
-                bposition = 0 if rroot == root.id else 1 if rroot > root.id else 2
-                fpositionVec = lookup(self.positionEmbeddings, fposition)
-                bpositionVec = lookup(self.positionEmbeddings, bposition)
-                fword = sentence.entries[froot]
-                rword = sentence.entries[rroot]
-                forward = forward.add_input(concatenate([fpositionVec, fword.depvec, fword.lstms]))
-                backward = backward.add_input(concatenate([bpositionVec, rword.depvec, rword.lstms]))
+            pred_lemma_index = 0 if dropFlag or sentence.entries[pred_index].norm not in self.words \
+                else self.words[sentence.entries[pred_index].norm]
+            v_p = bilstms[pred_index]
 
-                fword.f_head_vec = forward.output()
-                rword.b_head_vec = backward.output()
+            for arg_index in xrange(len(sentence.entries)):
+                gold_role = self.roles[sentence.entries[arg_index].predicateList[p]]
 
-            for dep in deps:
-                word = sentence.entries[dep]
-                word.head_vec = concatenate([word.f_head_vec, word.b_head_vec])
+                v_i = bilstms[arg_index]
+                cand = concatenate([v_i, v_p])
+                u_l = self.u_l[pred_lemma_index]
+                score_vector = []
+                for role in xrange(len(self.roles)):
+                    v_r = self.v_r[role]
+                    w_l_r = rectify(U * (concatenate([u_l, v_r])))
+                    score_vector.append(dot_product(w_l_r, cand))
 
-            bforward = self.bchildsetLSTMs[0].initial_state()
-            bbackward = self.bchildsetLSTMs[1].initial_state()
-            for froot, rroot in zip(deps, reversed(deps)):
-                fword = sentence.entries[froot]
-                rword = sentence.entries[rroot]
-                bforward = bforward.add_input(fword.head_vec)
-                bbackward = bbackward.add_input(rword.head_vec)
-            root.childLstms = concatenate([bforward.output(), bbackward.output()])
+                err = pickneglogsoftmax(concatenate(score_vector[:]), gold_role)
+                errs.append(err)
+        return errs
 
-    def Predict(self, conll_path):
-        for iSentence, sentence in enumerate(read_conll(conll_path)):
-            self.Init()
-            self.getWordEmbeddings(sentence.entries, False)
-            self.childrenLstms(sentence)
-            for p in range(len(sentence.predicates)):
-                predicate = sentence.predicates[p]
-                for arg in range(1, len(sentence.entries)):
-                    scores = self.__evaluate(sentence, predicate, arg)
-                    sentence.entries[arg].predicateList[p] = max(chain(*scores), key=itemgetter(2))[0]
-            renew_cg()
-            yield sentence
+    def decode(self, sentence):
+        bilstms = self.getBilstmFeatures(sentence.entries, False, len(sentence.entries))
+        U = parameter(self.U)
+        for p in xrange(len(sentence.predicates)):
+            pred_index = sentence.predicates[p]
+            c = float(self.wordsCount.get(sentence.entries[pred_index].norm, 0))
+            dropFlag = random.random() < (c / (self.alpha + c))
+
+            pred_lemma_index = 0 if dropFlag or sentence.entries[pred_index].norm not in self.words \
+                else self.words[sentence.entries[pred_index].norm]
+            v_p = bilstms[pred_index]
+
+            for arg_index in xrange(len(sentence.entries)):
+                v_i = bilstms[arg_index]
+                cand = concatenate([v_i, v_p])
+                u_l = self.u_l[pred_lemma_index]
+                best_role = '_'
+                max_score = -float('inf')
+                for r in self.roles.keys():
+                    role = self.roles[r]
+                    v_r = self.v_r[role]
+                    w_l_r = rectify(U * (concatenate([u_l, v_r])))
+                    score = dot_product(w_l_r, cand).value()
+                    if score > max_score:
+                        max_score = score
+                        best_role = r
+                sentence.entries[arg_index].predicateList[p] = best_role
 
     def Train(self, conll_path):
-        mloss = 0.0
-        eloss = 0.0
-        eerrors = 0
-        lerrors = 0
-        etotal = 0
-        ninf = -float('inf')
         start = time.time()
         shuffledData = list(read_conll(conll_path))
         random.shuffle(shuffledData)
         errs = []
-        self.Init()
+        sentences = []
+        loss = 0
         for iSentence, sentence in enumerate(shuffledData):
-            if iSentence % 100 == 0:
-                try:
-                    print 'Processing sentence number:', iSentence, 'Loss:', eloss / etotal, 'Errors:', (float(
-                        eerrors)) / etotal, 'Labeled Errors:', (float(lerrors) / etotal), 'Time', time.time() - start
-                except:
-                    print 'sentence', iSentence
-                start = time.time()
-                eerrors = 0
-                eloss = 0.0
-                etotal = 0
-                lerrors = 0
-            self.getWordEmbeddings(sentence.entries, True)
-            self.childrenLstms(sentence)
-            for p in range(1, len(sentence.predicates)):
-                predicate = sentence.predicates[p]
-                for arg in range(1, len(sentence.entries)):
-                    scores = self.__evaluate(sentence, predicate, arg)
-                    best = max(chain(*scores), key=itemgetter(2))
-                    gold = sentence.entries[arg].predicateList[p]
-                    predicted = best[0]
+            sentences.append(sentence)
+            if len(sentences)>self.batch_size:
+                pad_s = 0
+                for sen in sentences:
+                    if len(sen.entries)>pad_s:
+                        pad_s = len(sen.entries)
+                for sen in sentences:
+                    errs += self.buildGraph(sen, pad_s)
 
-                    if gold != predicted:
-                        gold_score = 0
-                        g_s = 0
-                        if gold == '_':
-                            gold_score = scores[1][0][3]
-                            g_s = scores[1][0][2]
-                        else:
-                            for item in scores[0]:
-                                if item[0] == gold:
-                                    gold_score = item[3]
-                                    g_s = item[2]
-                                    break
-
-                        if gold != '_' and predicted != '_':
-                            lerrors += 1
-                        else:
-                            lerrors += 1
-                            eerrors += 1
-
-                        loss = best[3] - gold_score
-                        mloss += 1.0 + best[2] - g_s
-                        eloss += 1.0 + best[2] - g_s
-                        errs.append(loss)
-                    etotal += 1
-            if len(errs) > 50:
                 eerrs = esum(errs)
-                scalar_loss = eerrs.scalar_value()
+                loss += eerrs.scalar_value()
                 eerrs.backward()
                 self.trainer.update()
-                errs = []
                 renew_cg()
-                self.Init()
+                print 'loss:', loss / len(errs), 'time:', time.time() - start
+                errs = []
+                sentences = []
+                start = time.time()
 
-        if len(errs) > 0:
-            eerrs = (esum(errs))  # * (1.0/(float(len(errs))))
+        if len(sentences) > 0:
+            for sen in sentences:
+                if len(sen.entries) > pad_s:
+                    pad_s = len(sen.entries)
+            for sen in sentences:
+                errs += self.buildGraph(sen, pad_s)
+            eerrs = esum(errs)
             eerrs.scalar_value()
             eerrs.backward()
             self.trainer.update()
             renew_cg()
 
         self.trainer.update_epoch()
-        print "Loss: ", mloss / iSentence
+
+    def Predict(self, conll_path):
+        for iSentence, sentence in enumerate(read_conll(conll_path)):
+            self.decode(sentence)
+            if iSentence + 1 % 100 == 0: sys.stdout.write(str(iSentence + 1) + '...')
+            renew_cg()
+            yield sentence
