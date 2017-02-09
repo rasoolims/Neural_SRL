@@ -12,10 +12,10 @@ class SRLLSTM:
         self.batch_size = options.batch
         self.trainer = AdamTrainer(self.model, options.learning_rate)
         self.wordsCount = words
-        self.words = {word: ind + 3 for word, ind in w2i.iteritems()}
-        self.lemmas = {lemma: ind + 3 for lemma, ind in l2i.iteritems()}
-        self.pred_lemmas = {pl: ind + 3 for pl, ind in pl2i.iteritems()}
-        self.pos = {word: ind + 3 for ind, word in enumerate(pos)}
+        self.words = {word: ind + 2 for word, ind in w2i.iteritems()}
+        self.lemmas = {lemma: ind + 2 for lemma, ind in l2i.iteritems()}
+        self.pred_lemmas = {pl: ind + 2 for pl, ind in pl2i.iteritems()}
+        self.pos = {word: ind for ind, word in enumerate(pos)}
         self.roles = {word: ind for ind, word in enumerate(roles)}
         self.iroles = roles
         self.d_w = options.d_w
@@ -39,7 +39,7 @@ class SRLLSTM:
             self.edim = len(self.external_embedding.values()[0])
             self.noextrn = [0.0 for _ in xrange(self.edim)]
             self.x_pe_dict = {word: i + 2 for i, word in enumerate(self.external_embedding)}
-            self.x_pe = self.model.add_lookup_parameters((len(self.external_embedding) + 3, self.edim))
+            self.x_pe = self.model.add_lookup_parameters((len(self.external_embedding) + 2, self.edim))
             for word, i in self.x_pe_dict.iteritems():
                 self.x_pe.init_row(i, self.external_embedding[word])
             self.x_pe.init_row(0,self.noextrn)
@@ -57,7 +57,7 @@ class SRLLSTM:
 
         self.x_re = self.model.add_lookup_parameters((len(self.words) + 2, self.d_w))
         self.x_le = self.model.add_lookup_parameters((len(self.lemmas) + 2, self.d_l))
-        self.x_pos = self.model.add_lookup_parameters((len(pos) + 2, self.d_pos))
+        self.x_pos = self.model.add_lookup_parameters((len(pos), self.d_pos))
         self.u_l = self.model.add_lookup_parameters((len(self.pred_lemmas) + 2, self.d_prime_l))
         self.v_r = self.model.add_lookup_parameters((len(self.roles), self.d_r))
         self.U = self.model.add_parameters((self.d_h * 4, self.d_r + self.d_prime_l))
