@@ -114,8 +114,8 @@ class SRLLSTM:
             fw_i = [x.output() for x in f_init_i.add_inputs(layer_inputs[-1])]
             bw_i = [x.output() for x in b_init_i.add_inputs(reversed(layer_inputs[-1]))]
             input_i = []
-            for j in xrange(len(x_re)):
-                input_i.append(concatenate(filter(None, [fw_i[j], bw_i[len(x_re) - 1 - j]])))
+            for j in xrange(len(fw_i)):
+                input_i.append(concatenate(filter(None, [fw_i[j], bw_i[len(fw_i) - 1 - j]])))
             layer_inputs.append(input_i)
 
         return layer_inputs[-1]
@@ -127,8 +127,7 @@ class SRLLSTM:
         for p in xrange(len(sentence.predicates)):
             pred_index = sentence.predicates[p]
             c = float(self.wordsCount.get(sentence.entries[pred_index].norm, 0))
-            dropFlag = random.random() < (c / (self.alpha + c))
-
+            dropFlag = random.random() < 1.0 - (c / (self.alpha + c))
             pred_lemma_index = 0 if dropFlag or sentence.entries[pred_index].lemma not in self.pred_lemmas \
                 else self.pred_lemmas[sentence.entries[pred_index].lemma]
             v_p = bilstms[pred_index]
