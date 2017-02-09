@@ -197,6 +197,7 @@ class SRLLSTM:
                 print 'loss:', loss / len(errs), 'time:', time.time() - start, 'max_len', pad_s, 'instances',len(errs), 'correct', float(corrects)/len(errs)
                 errs = []
                 sentences = []
+                corrects = 0
                 start = time.time()
 
         if len(sentences) > 0:
