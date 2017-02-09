@@ -129,8 +129,8 @@ class SRLLSTM:
             c = float(self.wordsCount.get(sentence.entries[pred_index].norm, 0))
             dropFlag = random.random() < (c / (self.alpha + c))
 
-            pred_lemma_index = 0 if dropFlag or sentence.entries[pred_index].norm not in self.words \
-                else self.words[sentence.entries[pred_index].norm]
+            pred_lemma_index = 0 if dropFlag or sentence.entries[pred_index].lemma not in self.pred_lemmas \
+                else self.pred_lemmas[sentence.entries[pred_index].lemma]
             v_p = bilstms[pred_index]
 
             for arg_index in xrange(len(sentence.entries)):
@@ -154,11 +154,8 @@ class SRLLSTM:
         U = parameter(self.U)
         for p in xrange(len(sentence.predicates)):
             pred_index = sentence.predicates[p]
-            c = float(self.wordsCount.get(sentence.entries[pred_index].norm, 0))
-            dropFlag = random.random() < (c / (self.alpha + c))
-
-            pred_lemma_index = 0 if dropFlag or sentence.entries[pred_index].norm not in self.words \
-                else self.words[sentence.entries[pred_index].norm]
+            pred_lemma_index = 0 if sentence.entries[pred_index].lemma not in self.pred_lemmas \
+                else self.pred_lemmas[sentence.entries[pred_index].lemma]
             v_p = bilstms[pred_index]
 
             for arg_index in xrange(len(sentence.entries)):
