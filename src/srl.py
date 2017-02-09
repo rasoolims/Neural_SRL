@@ -138,7 +138,7 @@ class SRLLSTM:
                     w_l_r = rectify(U * (concatenate([u_l, v_r])))
                     ws.append(w_l_r)
                 W = transpose(concatenate_cols([w for w in ws]))
-                scores = W*cand
+                scores = softmax(W*cand)
                 err = pickneglogsoftmax(scores, gold_role)
                 errs.append(err)
         return errs
