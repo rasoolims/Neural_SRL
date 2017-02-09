@@ -38,13 +38,12 @@ class SRLLSTM:
 
             self.edim = len(self.external_embedding.values()[0])
             self.noextrn = [0.0 for _ in xrange(self.edim)]
-            self.x_pe_dict = {word: i + 3 for i, word in enumerate(self.external_embedding)}
+            self.x_pe_dict = {word: i + 2 for i, word in enumerate(self.external_embedding)}
             self.x_pe = self.model.add_lookup_parameters((len(self.external_embedding) + 3, self.edim))
             for word, i in self.x_pe_dict.iteritems():
                 self.x_pe.init_row(i, self.external_embedding[word])
-            self.x_pe_dict['*PAD*'] = 1
-            self.x_pe_dict['*INITIAL*'] = 2
-
+            self.x_pe.init_row(0,self.noextrn)
+            self.x_pe.init_row(1,self.noextrn)
             print 'Load external embedding. Vector dimensions', self.edim
 
         self.inp_dim = self.d_w + self.d_l + self.d_pos + (
@@ -56,10 +55,10 @@ class SRLLSTM:
                           + [[LSTMBuilder(1, self.d_h * 2, self.d_h, self.model),
                               LSTMBuilder(1, self.d_h * 2, self.d_h, self.model)] for i in xrange(self.k - 1)]
 
-        self.x_re = self.model.add_lookup_parameters((len(self.words) + 3, self.d_w))
-        self.x_le = self.model.add_lookup_parameters((len(self.lemmas) + 3, self.d_l))
-        self.x_pos = self.model.add_lookup_parameters((len(pos) + 3, self.d_pos))
-        self.u_l = self.model.add_lookup_parameters((len(self.pred_lemmas) + 3, self.d_prime_l))
+        self.x_re = self.model.add_lookup_parameters((len(self.words) + 2, self.d_w))
+        self.x_le = self.model.add_lookup_parameters((len(self.lemmas) + 2, self.d_l))
+        self.x_pos = self.model.add_lookup_parameters((len(pos) + 2, self.d_pos))
+        self.u_l = self.model.add_lookup_parameters((len(self.pred_lemmas) + 2, self.d_prime_l))
         self.v_r = self.model.add_lookup_parameters((len(self.roles), self.d_r))
         self.U = self.model.add_parameters((self.d_h * 4, self.d_r + self.d_prime_l))
 
@@ -92,13 +91,14 @@ class SRLLSTM:
             else:
                 x_pe.append(None)
 
+        ''' #todo
         for i in range(len(sentence), pad_length):
             x_re.append(lookup(self.x_re, 1))
             x_le.append(lookup(self.x_le, 1))
             x_pos.append(lookup(self.x_pos, 1))
             x_pe.append(lookup(self.x_pe, 1)) if self.x_pe else x_pe.append(None)
             pred_bool.append(inputVector([0]))
-
+        '''
         seq_input = [concatenate(filter(None, [x_re[i], x_pe[i], x_pos[i], x_le[i], pred_bool[i]])) for i in
                      xrange(len(x_re))]
         f_init, b_init = [b.initial_state() for b in self.deep_lstms[0]]
