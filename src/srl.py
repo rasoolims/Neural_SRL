@@ -200,7 +200,7 @@ class SRLLSTM:
                 eerrs.backward()
                 self.trainer.update()
                 renew_cg()
-                print 'loss:', loss / len(errs), 'time:', time.time() - start
+                print 'loss:', loss / len(errs), 'time:', time.time() - start, 'max_len', pad_s, 'instances',len(errs)
                 errs = []
                 sentences = []
                 start = time.time()
