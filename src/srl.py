@@ -69,6 +69,7 @@ class SRLLSTM:
 
     def getBilstmFeatures(self, sentence, train, pad_length):
         x_re, x_pe, x_pos, x_le, pred_bool = [], [], [], [], []
+        self.empty_lemma_embed = inputVector([0] * self.d_l)
 
         # first extracting embedding features.
         for root in sentence:
