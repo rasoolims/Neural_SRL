@@ -16,9 +16,9 @@ if __name__ == '__main__':
                       default=None)
     parser.add_option("--output", dest="output", help="output file", metavar="FILE",
                       default=None)
-    parser.add_option("--params", dest="params", help="Parameters file", metavar="FILE", default="params.pickle")
+    parser.add_option("--params", dest="params", help="Parameters file", metavar="FILE", default="params")
     parser.add_option("--extrn", dest="external_embedding", help="External embeddings", metavar="FILE")
-    parser.add_option("--model", dest="model", help="Load/Save model file", metavar="FILE", default="barchybrid.model")
+    parser.add_option("--model", dest="model", help="Load/Save model file", metavar="FILE", default="model")
     parser.add_option("--d_w", type="int", dest="d_w", default=100)
     parser.add_option("--d_l", type="int", dest="d_l", default=100)
     parser.add_option("--d_pos", type="int", dest="d_pos", default=16)

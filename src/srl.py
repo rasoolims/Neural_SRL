@@ -115,7 +115,7 @@ class SRLLSTM:
 
         return layer_inputs[-1]
 
-    def buildGraph(self, sentence, pad_len, correct):
+    def buildGraph(self, sentence, pad_len, correct, role_correct, role_all):
         errs = []
         bilstms = self.getBilstmFeatures(sentence.entries, True, pad_len)
         U = parameter(self.U)
@@ -140,7 +140,10 @@ class SRLLSTM:
                     ws.append(w_l_r)
                 W = transpose(concatenate_cols([w for w in ws]))
                 scores = W*cand
-                if np.argmax(scores.npvalue()) == gold_role: correct+=1
+                if np.argmax(scores.npvalue()) == gold_role:
+                    correct+=1
+                    role_correct[gold_role]+=1
+                role_all[gold_role]+=1
 
                 err = pickneglogsoftmax(scores, gold_role)
                 errs.append(err)
@@ -176,6 +179,8 @@ class SRLLSTM:
         sentences = []
         loss = 0
         corrects = 0
+        role_correct = defaultdict(int)
+        role_all = defaultdict(int)
         iters = 0
         for iSentence, sentence in enumerate(shuffledData):
             sentences.append(sentence)
@@ -185,7 +190,7 @@ class SRLLSTM:
                     if len(sen.entries)>pad_s:
                         pad_s = len(sen.entries)
                 for sen in sentences:
-                    e, corrects = self.buildGraph(sen, pad_s, corrects)
+                    e, corrects = self.buildGraph(sen, pad_s, corrects, role_correct, role_all)
                     errs+= e
                 sum_errs = esum(errs)
                 loss += sum_errs.scalar_value()
@@ -196,6 +201,12 @@ class SRLLSTM:
                 errs = []
                 sentences = []
                 corrects = 0
+                o = []
+                for role in role_all.keys():
+                    o.append(role+':'+str((float(role_correct[role])/role_all[role])))
+                print '\t'.join(o)
+                role_correct = defaultdict(int)
+                role_all = defaultdict(int)
                 loss = 0
 
                 start = time.time()
@@ -211,7 +222,7 @@ class SRLLSTM:
                 if len(sen.entries) > pad_s:
                     pad_s = len(sen.entries)
             for sen in sentences:
-                e, corrects = self.buildGraph(sen, pad_s, corrects)
+                e, corrects = self.buildGraph(sen, pad_s, corrects, role_correct, role_all)
                 errs += e
             eerrs = esum(errs)
             eerrs.scalar_value()
