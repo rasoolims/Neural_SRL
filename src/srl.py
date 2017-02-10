@@ -42,6 +42,7 @@ class SRLLSTM:
                 self.x_pe.init_row(i, self.external_embedding[word])
             self.x_pe.init_row(0,self.noextrn)
             self.x_pe.init_row(1,self.noextrn)
+            self.x_pe.set_updated(False)
             print 'Load external embedding. Vector dimensions', self.edim
 
         self.inp_dim = self.d_w + self.d_l + self.d_pos + (
@@ -141,11 +142,11 @@ class SRLLSTM:
                     ws.append(w_l_r)
                 W = transpose(concatenate_cols([w for w in ws]))
                 scores = W*cand
-                if np.argmax(scores.npvalue()) == gold_role:
+                argmax = np.argmax(scores.npvalue())
+                if argmax == gold_role:
                     correct+=1
                     role_correct[gold_role]+=1
                 role_all[gold_role]+=1
-
                 err = pickneglogsoftmax(scores, gold_role)
                 errs.append(err)
         return errs,correct
