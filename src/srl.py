@@ -2,6 +2,7 @@ from dynet import *
 from utils import read_conll,write_conll
 import time, random, os
 import numpy as np
+from collections import  defaultdict
 
 class SRLLSTM:
     def __init__(self, words, pos, roles, w2i, l2i, pl2i, options):
