@@ -59,7 +59,7 @@ class SRLLSTM:
         self.u_l = self.model.add_lookup_parameters((len(self.pred_lemmas) + 2, self.d_prime_l))
         self.v_r = self.model.add_lookup_parameters((len(self.roles), self.d_r))
         self.U = self.model.add_parameters((self.d_h * 4, self.d_r + self.d_prime_l))
-        self.empty_lemma_embed = concatenate([0]*self.d_l)
+        self.empty_lemma_embed = inputVector([0]*self.d_l)
 
     def Save(self, filename):
         self.model.save(filename)
