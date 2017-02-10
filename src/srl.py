@@ -5,13 +5,12 @@ import numpy as np
 from collections import  defaultdict
 
 class SRLLSTM:
-    def __init__(self, words, pos, roles, w2i, l2i, pl2i, options):
+    def __init__(self, words, pos, roles, w2i, pl2i, options):
         self.model = Model()
         self.batch_size = options.batch
         self.trainer = AdamTrainer(self.model, options.learning_rate)
         self.wordsCount = words
         self.words = {word: ind + 2 for word, ind in w2i.iteritems()}
-        self.lemmas = {lemma: ind + 2 for lemma, ind in l2i.iteritems()}
         self.pred_lemmas = {pl: ind + 2 for pl, ind in pl2i.iteritems()}
         self.pos = {word: ind for ind, word in enumerate(pos)}
         self.roles = {word: ind for ind, word in enumerate(roles)}
@@ -55,11 +54,12 @@ class SRLLSTM:
                               LSTMBuilder(1, self.d_h * 2, self.d_h, self.model)] for i in xrange(self.k - 1)]
 
         self.x_re = self.model.add_lookup_parameters((len(self.words) + 2, self.d_w))
-        self.x_le = self.model.add_lookup_parameters((len(self.lemmas) + 2, self.d_l))
+        self.x_le = self.model.add_lookup_parameters((len(self.pred_lemmas) + 2, self.d_l))
         self.x_pos = self.model.add_lookup_parameters((len(pos), self.d_pos))
         self.u_l = self.model.add_lookup_parameters((len(self.pred_lemmas) + 2, self.d_prime_l))
         self.v_r = self.model.add_lookup_parameters((len(self.roles), self.d_r))
         self.U = self.model.add_parameters((self.d_h * 4, self.d_r + self.d_prime_l))
+        self.empty_lemma_embed = concatenate([0]*self.d_l)
 
     def Save(self, filename):
         self.model.save(filename)
@@ -73,9 +73,10 @@ class SRLLSTM:
         # first extracting embedding features.
         for root in sentence:
             c = float(self.wordsCount.get(root.norm, 0))
-            dropFlag = not train or (random.random() < 1.0 - (c / (self.alpha + c)))
-            x_re.append(lookup(self.x_re, int(self.words.get(root.norm, 0)) if dropFlag else 0))
-            x_le.append(lookup(self.x_le, int(self.lemmas.get(root.lemmaNorm, 0)) if dropFlag else 0))
+            word_drop = not train or (random.random() < 1.0 - (c / (self.alpha + c)))
+            x_re.append(lookup(self.x_re, int(self.words.get(root.norm, 0)) if not word_drop else 0))
+            # just have lemma embedding for predicates
+            x_le.append(lookup(self.x_le, int(self.pred_lemmas.get(root.lemma, 0)) if not word_drop else 0)) if root.is_pred else x_le.append(self.empty_lemma_embed)
             x_pos.append(lookup(self.x_pos, int(self.pos[root.pos])))
             pred_bool.append(inputVector([1])) if root.is_pred else pred_bool.append(inputVector([0]))
             if self.external_embedding is not None:
@@ -124,8 +125,8 @@ class SRLLSTM:
         for p in xrange(len(sentence.predicates)):
             pred_index = sentence.predicates[p]
             c = float(self.wordsCount.get(sentence.entries[pred_index].norm, 0))
-            dropFlag = random.random() < 1.0 - (c / (self.alpha + c))
-            pred_lemma_index = 0 if dropFlag or sentence.entries[pred_index].lemma not in self.pred_lemmas \
+            word_drop = random.random() < 1.0 - (c / (self.alpha + c))
+            pred_lemma_index = 0 if word_drop or sentence.entries[pred_index].lemma not in self.pred_lemmas \
                 else self.pred_lemmas[sentence.entries[pred_index].lemma]
             v_p = bilstms[pred_index]
 

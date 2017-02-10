@@ -39,14 +39,12 @@ class ConllEntry:
 
 def vocab(conll_path):
     wordsCount = Counter()
-    lemma_count = Counter()
     posCount = Counter()
     semRelCount = Counter()
     predicate_lemmas = set()
 
     for sentence in read_conll(conll_path):
         wordsCount.update([node.norm for node in sentence.entries])
-        lemma_count.update([node.lemma for node in sentence.entries])
         posCount.update([node.pos for node in sentence.entries])
         for node in sentence.entries:
             if node.predicateList == None:
@@ -55,7 +53,6 @@ def vocab(conll_path):
             for pred in node.predicateList.values():
                 semRelCount.update([pred])
     return (wordsCount, {w: i for i, w in enumerate(wordsCount.keys())},
-            {w: i for i, w in enumerate(lemma_count.keys())},
             posCount.keys(), semRelCount.keys(),
             {w: i for i, w in enumerate(predicate_lemmas)},)
 
