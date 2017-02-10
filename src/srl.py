@@ -147,9 +147,7 @@ class SRLLSTM:
                     correct+=1
                     role_correct[gold_role]+=1
                 role_all[gold_role]+=1
-                probs = softmax(scores)
-                err = - probs[gold_role]*log(probs[gold_role])
-                #err = pickneglogsoftmax(scores, gold_role)
+                err = pickneglogsoftmax(scores, gold_role)
                 errs.append(err)
         return errs,correct
 
