@@ -74,7 +74,7 @@ class SRLLSTM:
         # first extracting embedding features.
         for root in sentence:
             c = float(self.wordsCount.get(root.norm, 0))
-            word_drop = not train or (random.random() < 1.0 - (c / (self.alpha + c)))
+            word_drop = train and (random.random() < 1.0 - (c / (self.alpha + c)))
             x_re.append(lookup(self.x_re, int(self.words.get(root.norm, 0)) if not word_drop else 0))
             # just have lemma embedding for predicates
             x_le.append(lookup(self.x_le, int(self.pred_lemmas.get(root.lemma, 0)) if not word_drop else 0)) if root.is_pred else x_le.append(self.empty_lemma_embed)
