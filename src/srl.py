@@ -207,6 +207,11 @@ class SRLLSTM:
                     print 'Finished predicting dev; time:', time.time() - start
                 start = time.time()
 
+        write_conll(model_path + '.txt', self.Predict(dev_path))
+        os.system(
+            'perl src/utils/eval.pl -g ' + dev_path + ' -s ' + model_path + '.txt' + ' > ' + model_path + '.eval &')
+        print 'Finished predicting dev; time:', time.time() - start
+        
         self.trainer.update_epoch()
 
     def Predict(self, conll_path):
