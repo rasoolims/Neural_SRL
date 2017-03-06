@@ -67,7 +67,7 @@ class SRLLSTM:
     def Load(self, filename):
         self.model.load(filename)
 
-    def getBilstmFeatures(self, sentence, train, pad_length):
+    def getBilstmFeatures(self, sentence, train):
         x_re, x_pe, x_pos, x_le, pred_bool = [], [], [], [], []
         self.empty_lemma_embed = inputVector([0] * self.d_l)
 
@@ -89,13 +89,6 @@ class SRLLSTM:
                     x_pe.append(lookup(self.x_pe, 0))
             else:
                 x_pe.append(None)
-
-        for i in range(len(sentence), pad_length):
-            x_re.append(lookup(self.x_re, 1))
-            x_le.append(lookup(self.x_le, 1))
-            x_pos.append(lookup(self.x_pos, 1))
-            x_pe.append(lookup(self.x_pe, 1)) if self.x_pe else x_pe.append(None)
-            pred_bool.append(inputVector([0]))
 
         seq_input = [concatenate(filter(None, [x_re[i], x_pe[i], x_pos[i], x_le[i], pred_bool[i]])) for i in
                      xrange(len(x_re))]
@@ -119,9 +112,9 @@ class SRLLSTM:
 
         return layer_inputs[-1]
 
-    def buildGraph(self, sentence, pad_len, correct, role_correct, role_all):
+    def buildGraph(self, sentence, correct, role_correct, role_all):
         errs = []
-        bilstms = self.getBilstmFeatures(sentence.entries, True, pad_len)
+        bilstms = self.getBilstmFeatures(sentence.entries, True)
         U = parameter(self.U)
         for p in xrange(len(sentence.predicates)):
             pred_index = sentence.predicates[p]
@@ -189,19 +182,15 @@ class SRLLSTM:
         for iSentence, sentence in enumerate(shuffledData):
             sentences.append(sentence)
             if len(sentences)>self.batch_size:
-                pad_s = 0
                 for sen in sentences:
-                    if len(sen.entries)>pad_s:
-                        pad_s = len(sen.entries)
-                for sen in sentences:
-                    e, corrects = self.buildGraph(sen, pad_s, corrects, role_correct, role_all)
+                    e, corrects = self.buildGraph(sen, corrects, role_correct, role_all)
                     errs+= e
                 sum_errs = esum(errs)
                 loss += sum_errs.scalar_value()
                 sum_errs.backward()
                 self.trainer.update()
                 renew_cg()
-                print 'loss:', loss / len(errs), 'time:', time.time() - start, 'max_len', pad_s, 'instances',len(errs), 'correct', 100*float(corrects)/len(errs)
+                print 'loss:', loss / len(errs), 'time:', time.time() - start, 'instances',len(errs), 'correct', 100*float(corrects)/len(errs)
                 errs = []
                 sentences = []
                 corrects = 0
@@ -221,12 +210,8 @@ class SRLLSTM:
                     print 'Finished predicting dev; time:', time.time() - start
                 start = time.time()
 
-        if len(sentences) > 0:
             for sen in sentences:
-                if len(sen.entries) > pad_s:
-                    pad_s = len(sen.entries)
-            for sen in sentences:
-                e, corrects = self.buildGraph(sen, pad_s, corrects, role_correct, role_all)
+                e, corrects = self.buildGraph(sen, corrects, role_correct, role_all)
                 errs += e
             eerrs = esum(errs)
             eerrs.scalar_value()
