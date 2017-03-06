@@ -147,7 +147,7 @@ class SRLLSTM:
         return errs,correct
 
     def decode(self, sentence):
-        bilstms = self.getBilstmFeatures(sentence.entries, False, len(sentence.entries))
+        bilstms = self.getBilstmFeatures(sentence.entries, False)
         U = parameter(self.U)
         for p in xrange(len(sentence.predicates)):
             pred_index = sentence.predicates[p]
@@ -211,7 +211,7 @@ class SRLLSTM:
         os.system(
             'perl src/utils/eval.pl -g ' + dev_path + ' -s ' + model_path + '.txt' + ' > ' + model_path + '.eval &')
         print 'Finished predicting dev; time:', time.time() - start
-        
+
         self.trainer.update_epoch()
 
     def Predict(self, conll_path):
