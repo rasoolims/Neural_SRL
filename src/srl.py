@@ -75,7 +75,7 @@ class SRLLSTM:
         # first extracting embedding features.
         for root in sentence:
             c = float(self.wordsCount.get(root.norm, 0))
-            word_drop = train and (random.random() < 1.0 - (c / (self.alpha + c)))
+            word_drop = False # todo train and (random.random() < 1.0 - (c / (self.alpha + c)))
             x_re.append(lookup(self.x_re, int(self.words.get(root.norm, 0)) if not word_drop else 0))
             # just have lemma embedding for predicates
             x_le.append(lookup(self.x_le, int(self.pred_lemmas.get(root.lemma, 0)) if not word_drop else 0)) if root.is_pred else x_le.append(self.empty_lemma_embed)
@@ -125,7 +125,7 @@ class SRLLSTM:
 
             for arg_index in xrange(len(sentence.entries)):
                 gold_role = self.roles[sentence.entries[arg_index].predicateList[p]]
-                word_drop = random.random() < 1.0 - (c / (self.alpha + c))
+                word_drop = False #todo random.random() < 1.0 - (c / (self.alpha + c))
                 pred_lemma_index = 0 if word_drop or sentence.entries[pred_index].lemma not in self.pred_lemmas \
                     else self.pred_lemmas[sentence.entries[pred_index].lemma]
                 v_i = bilstms[arg_index]
