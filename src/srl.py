@@ -210,15 +210,6 @@ class SRLLSTM:
                     print 'Finished predicting dev; time:', time.time() - start
                 start = time.time()
 
-            for sen in sentences:
-                e, corrects = self.buildGraph(sen, corrects, role_correct, role_all)
-                errs += e
-            eerrs = esum(errs)
-            eerrs.scalar_value()
-            eerrs.backward()
-            self.trainer.update()
-            renew_cg()
-
         self.trainer.update_epoch()
 
     def Predict(self, conll_path):
