@@ -59,6 +59,7 @@ class SRLLSTM:
         self.u_l = self.model.add_lookup_parameters((len(self.pred_lemmas) + 2, self.d_prime_l))
         self.v_r = self.model.add_lookup_parameters((len(self.roles), self.d_r))
         self.U = self.model.add_parameters((self.d_h * 4, self.d_r + self.d_prime_l))
+        self.WU = self.model.add_parameters((len(self.roles), self.d_h * 4))
         self.empty_lemma_embed = inputVector([0]*self.d_l)
 
     def Save(self, filename):
@@ -115,7 +116,8 @@ class SRLLSTM:
     def buildGraph(self, sentence, correct, role_correct, role_all):
         errs = []
         bilstms = self.getBilstmFeatures(sentence.entries, True)
-        U = parameter(self.U)
+        #U = parameter(self.U)
+        WU = parameter(self.WU)
         for p in xrange(len(sentence.predicates)):
             pred_index = sentence.predicates[p]
             c = float(self.wordsCount.get(sentence.entries[pred_index].norm, 0))
@@ -130,12 +132,13 @@ class SRLLSTM:
                 cand = concatenate([v_i, v_p])
                 u_l = self.u_l[pred_lemma_index]
                 ws = []
-                for role in xrange(len(self.roles)):
-                    v_r = self.v_r[role]
-                    w_l_r = rectify(U * (concatenate([u_l, v_r])))
-                    ws.append(w_l_r)
-                W = transpose(concatenate_cols([w for w in ws]))
-                scores = W*cand
+                # for role in xrange(len(self.roles)):
+                #     v_r = self.v_r[role]
+                #     w_l_r = rectify(U * (concatenate([u_l, v_r])))
+                #     ws.append(w_l_r)
+                # W = transpose(concatenate_cols([w for w in ws]))
+                # scores = W *cand
+                scores = WU*cand
                 argmax = np.argmax(scores.npvalue())
                 if argmax == gold_role:
                     correct+=1
@@ -147,7 +150,8 @@ class SRLLSTM:
 
     def decode(self, sentence):
         bilstms = self.getBilstmFeatures(sentence.entries, False)
-        U = parameter(self.U)
+        # U = parameter(self.U)
+        WU = parameter(self.WU)
         for p in xrange(len(sentence.predicates)):
             pred_index = sentence.predicates[p]
             pred_lemma_index = 0 if sentence.entries[pred_index].lemma not in self.pred_lemmas \
@@ -159,12 +163,13 @@ class SRLLSTM:
                 cand = concatenate([v_i, v_p])
                 u_l = self.u_l[pred_lemma_index]
                 ws = []
-                for role in xrange(len(self.roles)):
-                    v_r = self.v_r[role]
-                    w_l_r = rectify(U * (concatenate([u_l, v_r])))
-                    ws.append(w_l_r)
-                W = transpose(concatenate_cols([w for w in ws]))
-                scores = W * cand
+                # for role in xrange(len(self.roles)):
+                #     v_r = self.v_r[role]
+                #     w_l_r = rectify(U * (concatenate([u_l, v_r])))
+                #     ws.append(w_l_r)
+                # W = transpose(concatenate_cols([w for w in ws]))
+                # scores = W * cand
+                scores = WU * cand
                 sentence.entries[arg_index].predicateList[p] = self.iroles[np.argmax(scores.npvalue())]
 
     def Train(self, conll_path, dev_path, model_path):
