@@ -83,11 +83,11 @@ class SRLLSTM:
             pred_bool.append(inputVector([1])) if root.is_pred else pred_bool.append(inputVector([0]))
             if self.external_embedding is not None:
                 if root.form in self.external_embedding:
-                    x_pe.append(lookup(self.x_pe, self.x_pe_dict[root.form], update=True))
+                    x_pe.append(self.x_pe[self.x_pe_dict[root.form]])
                 elif root.norm in self.external_embedding:
-                    x_pe.append(lookup(self.x_pe, self.x_pe_dict[root.norm], update=True))
+                    x_pe.append(self.x_pe[self.x_pe_dict[root.norm]])
                 else:
-                    x_pe.append(lookup(self.x_pe, 0))
+                    x_pe.append(self.x_pe[0])
             else:
                 x_pe.append(None)
 
