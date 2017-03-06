@@ -188,12 +188,12 @@ class SRLLSTM:
                 sum_errs.backward()
                 self.trainer.update()
                 renew_cg()
-                print 'loss:', loss / len(errs), 'time:', time.time() - start, 'sen#',(iSentence+1), 'instances',len(errs), 'correct', 100*float(corrects)/len(errs)
+                print 'loss:', loss / len(errs), 'time:', time.time() - start, 'sen#',(iSentence+1), 'instances',len(errs), 'correct', round(100*float(corrects)/len(errs),2)
                 errs = []
                 corrects = 0
                 o = []
                 for role in role_all.keys():
-                    o.append(self.iroles[role]+':'+str((float(role_correct[role])/role_all[role])))
+                    o.append(self.iroles[role]+':'+str(round(float(role_correct[role])/role_all[role],2)))
                 print '\t'.join(o)
                 role_correct = defaultdict(int)
                 role_all = defaultdict(int)
