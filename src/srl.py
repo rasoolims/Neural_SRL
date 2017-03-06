@@ -188,7 +188,7 @@ class SRLLSTM:
                 sum_errs.backward()
                 self.trainer.update()
                 renew_cg()
-                print 'loss:', loss / len(errs), 'time:', time.time() - start, 'instances',len(errs), 'correct', 100*float(corrects)/len(errs)
+                print 'loss:', loss / len(errs), 'time:', time.time() - start, 'sen#',(iSentence+1), 'instances',len(errs), 'correct', 100*float(corrects)/len(errs)
                 errs = []
                 corrects = 0
                 o = []
