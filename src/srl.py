@@ -119,14 +119,13 @@ class SRLLSTM:
         for p in xrange(len(sentence.predicates)):
             pred_index = sentence.predicates[p]
             c = float(self.wordsCount.get(sentence.entries[pred_index].norm, 0))
-            word_drop = random.random() < 1.0 - (c / (self.alpha + c))
-            pred_lemma_index = 0 if word_drop or sentence.entries[pred_index].lemma not in self.pred_lemmas \
-                else self.pred_lemmas[sentence.entries[pred_index].lemma]
             v_p = bilstms[pred_index]
 
             for arg_index in xrange(len(sentence.entries)):
                 gold_role = self.roles[sentence.entries[arg_index].predicateList[p]]
-
+                word_drop = random.random() < 1.0 - (c / (self.alpha + c))
+                pred_lemma_index = 0 if word_drop or sentence.entries[pred_index].lemma not in self.pred_lemmas \
+                    else self.pred_lemmas[sentence.entries[pred_index].lemma]
                 v_i = bilstms[arg_index]
                 cand = concatenate([v_i, v_p])
                 u_l = self.u_l[pred_lemma_index]
