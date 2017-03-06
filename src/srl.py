@@ -173,18 +173,16 @@ class SRLLSTM:
         shuffledData = list(read_conll(conll_path))
         random.shuffle(shuffledData)
         errs = []
-        sentences = []
         loss = 0
         corrects = 0
         role_correct = defaultdict(int)
         role_all = defaultdict(int)
         iters = 0
         for iSentence, sentence in enumerate(shuffledData):
-            sentences.append(sentence)
-            if len(sentences)>=self.batch_size:
-                for sen in sentences:
-                    e, corrects = self.buildGraph(sen, corrects, role_correct, role_all)
-                    errs+= e
+            e, corrects = self.buildGraph(sentence, corrects, role_correct, role_all)
+            errs+= e
+
+            if len(errs)>=self.batch_size:
                 sum_errs = esum(errs)
                 loss += sum_errs.scalar_value()
                 sum_errs.backward()
@@ -192,7 +190,6 @@ class SRLLSTM:
                 renew_cg()
                 print 'loss:', loss / len(errs), 'time:', time.time() - start, 'instances',len(errs), 'correct', 100*float(corrects)/len(errs)
                 errs = []
-                sentences = []
                 corrects = 0
                 o = []
                 for role in role_all.keys():
