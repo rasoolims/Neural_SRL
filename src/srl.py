@@ -181,7 +181,7 @@ class SRLLSTM:
         iters = 0
         for iSentence, sentence in enumerate(shuffledData):
             sentences.append(sentence)
-            if len(sentences)>self.batch_size:
+            if len(sentences)>=self.batch_size:
                 for sen in sentences:
                     e, corrects = self.buildGraph(sen, corrects, role_correct, role_all)
                     errs+= e
