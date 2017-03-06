@@ -37,6 +37,7 @@ if __name__ == '__main__':
 
     if options.conll_train:
         print 'Preparing vocab'
+        print options
         words,w2i, pos, semRels, pl2i = utils.vocab(options.conll_train)
 
         with open(os.path.join(options.outdir, options.params), 'w') as paramsfp:
