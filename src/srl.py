@@ -58,7 +58,9 @@ class SRLLSTM:
         self.x_pos = self.model.add_lookup_parameters((len(pos), self.d_pos))
         self.u_l = self.model.add_lookup_parameters((len(self.pred_lemmas) + 2, self.d_prime_l))
         self.v_r = self.model.add_lookup_parameters((len(self.roles), self.d_r))
+        self.v_u_r = self.model.add_lookup_parameters((2, self.d_r))
         self.U = self.model.add_parameters((self.d_h * 4, self.d_r + self.d_prime_l))
+        self.UU = self.model.add_parameters((self.d_h * 4, self.d_r + self.d_prime_l))
         #self.WU = self.model.add_parameters((len(self.roles), self.d_h * 4))
         self.empty_lemma_embed = inputVector([0]*self.d_l)
 
@@ -113,10 +115,11 @@ class SRLLSTM:
 
         return layer_inputs[-1]
 
-    def buildGraph(self, sentence, correct, role_correct, role_all):
+    def buildGraph(self, sentence, correct, uCorrect, role_correct, role_all, nu, nl, u_role_correct,u_role_all):
         errs = []
         bilstms = self.getBilstmFeatures(sentence.entries, True)
         U = parameter(self.U)
+        UU = parameter(self.UU)
         #WU = parameter(self.WU)
         for p in xrange(len(sentence.predicates)):
             pred_index = sentence.predicates[p]
@@ -132,25 +135,44 @@ class SRLLSTM:
                 cand = concatenate([v_i, v_p])
                 u_l = self.u_l[pred_lemma_index]
                 ws = []
-                for role in xrange(len(self.roles)):
-                    v_r = self.v_r[role]
-                    w_l_r = rectify(U * (concatenate([u_l, v_r])))
-                    ws.append(w_l_r)
-                W = transpose(concatenate_cols([w for w in ws]))
-                scores = W *cand
-                #scores = WU*cand
-                argmax = np.argmax(scores.npvalue())
-                if argmax == gold_role:
-                    correct+=1
-                    role_correct[gold_role]+=1
-                role_all[gold_role]+=1
-                err = pickneglogsoftmax(scores, gold_role)
+                uws = []
+                for role in xrange(2):
+                    v_u_r = self.v_u_r[role]
+                    w_u_l_r = rectify(UU * (concatenate([u_l, v_u_r])))
+                    uws.append(w_u_l_r)
+                uW = transpose(concatenate_cols([w for w in uws]))
+                u_scores = uW *cand
+                argmax = np.argmax(u_scores.npvalue())
+                gr = 1 if sentence.entries[arg_index].predicateList[p]!='_' else 0
+                if argmax == gr:
+                    uCorrect += 1
+                    u_role_correct[gr]+=1
+                u_role_all[gr] += 1
+                err = pickneglogsoftmax(u_scores, gr)
                 errs.append(err)
-        return errs,correct
+                nu+=1
+                if gr!=0:
+                    for role in xrange(len(self.roles)):
+                        v_r = self.v_r[role]
+                        w_l_r = rectify(U * (concatenate([u_l, v_r])))
+                        ws.append(w_l_r)
+                    W = transpose(concatenate_cols([w for w in ws]))
+                    scores = W *cand
+                    #scores = WU*cand
+                    argmax = np.argmax(scores.npvalue())
+                    if argmax == gold_role:
+                        correct+=1
+                        role_correct[gold_role]+=1
+                    role_all[gold_role]+=1
+                    err = pickneglogsoftmax(scores, gold_role)
+                    errs.append(err)
+                    nl+=1
+        return errs,correct,uCorrect,nu,nl
 
     def decode(self, sentence):
         bilstms = self.getBilstmFeatures(sentence.entries, False)
         U = parameter(self.U)
+        UU = parameter(self.UU)
         #WU = parameter(self.WU)
         for p in xrange(len(sentence.predicates)):
             pred_index = sentence.predicates[p]
@@ -163,27 +185,44 @@ class SRLLSTM:
                 cand = concatenate([v_i, v_p])
                 u_l = self.u_l[pred_lemma_index]
                 ws = []
-                for role in xrange(len(self.roles)):
-                    v_r = self.v_r[role]
-                    w_l_r = rectify(U * (concatenate([u_l, v_r])))
-                    ws.append(w_l_r)
-                W = transpose(concatenate_cols([w for w in ws]))
-                scores = W * cand
-                #scores = WU * cand
-                sentence.entries[arg_index].predicateList[p] = self.iroles[np.argmax(scores.npvalue())]
+                uws = []
+                for role in xrange(2):
+                    v_u_r = self.v_u_r[role]
+                    w_u_l_r = rectify(UU * (concatenate([u_l, v_u_r])))
+                    uws.append(w_u_l_r)
+                uW = transpose(concatenate_cols([w for w in uws]))
+                u_scores = uW * cand
+                argmax = np.argmax(u_scores.npvalue())
+                if argmax != 0:
+                    for role in xrange(len(self.roles)):
+                        v_r = self.v_r[role]
+                        w_l_r = rectify(U * (concatenate([u_l, v_r])))
+                        ws.append(w_l_r)
+                    W = transpose(concatenate_cols([w for w in ws]))
+                    scores = W * cand
+                    # scores = WU*cand
+                    sentence.entries[arg_index].predicateList[p] = self.iroles[np.argmax(scores.npvalue())]
+                else:
+                    sentence.entries[arg_index].predicateList[p] = '_'
 
     def Train(self, conll_path, dev_path, model_path):
         start = time.time()
         shuffledData = list(read_conll(conll_path))
         random.shuffle(shuffledData)
         errs = []
+        uerrs = []
         loss = 0
         corrects = 0
+        ucorrects = 0
+        nu = 0
+        nl = 0
         role_correct = defaultdict(int)
         role_all = defaultdict(int)
+        u_role_correct = defaultdict(int)
+        u_role_all = defaultdict(int)
         iters = 0
         for iSentence, sentence in enumerate(shuffledData):
-            e, corrects = self.buildGraph(sentence, corrects, role_correct, role_all)
+            e, corrects,ucorrects,nu, nl = self.buildGraph(sentence, corrects,ucorrects, role_correct, role_all, nu, nl,u_role_correct,u_role_all)
             errs+= e
 
             if len(errs)>=self.batch_size:
@@ -192,12 +231,20 @@ class SRLLSTM:
                 sum_errs.backward()
                 self.trainer.update()
                 renew_cg()
-                print 'loss:', loss / len(errs), 'time:', time.time() - start, 'sen#',(iSentence+1), 'instances',len(errs), 'correct', round(100*float(corrects)/len(errs),2)
+                print 'loss:', loss / len(errs), 'time:', time.time() - start, 'sen#',(iSentence+1), 'instances',len(errs), 'correct', round(100*float(corrects)/nl,2),'ucorrect', round(100*float(ucorrects)/nu,2)
                 errs = []
                 corrects = 0
+                ucorrects = 0
+                nu = 0
+                nl = 0
+                o = []
+                for role in u_role_all.keys():
+                    o.append(str(role)+':'+str(round(float(u_role_correct[role])/u_role_all[role],2)))
+                print '\t'.join(o)
                 o = []
                 for role in role_all.keys():
                     o.append(self.iroles[role]+':'+str(round(float(role_correct[role])/role_all[role],2)))
+
                 print '\t'.join(o)
                 role_correct = defaultdict(int)
                 role_all = defaultdict(int)
