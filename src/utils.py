@@ -49,7 +49,8 @@ def vocab(conll_path):
         for node in sentence.entries:
             if node.predicateList == None:
                 continue
-            predicate_lemmas.add(node.lemma)
+            if node.is_pred:
+                predicate_lemmas.add(node.lemma)
             for pred in node.predicateList.values():
                 semRelCount.update([pred])
     return (wordsCount, {w: i for i, w in enumerate(wordsCount.keys())},
