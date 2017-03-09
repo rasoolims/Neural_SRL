@@ -58,11 +58,6 @@ if __name__ == '__main__':
         for epoch in xrange(options.epochs):
             print 'Starting epoch', epoch
             parser.Train(options.conll_train, options.conll_dev, os.path.join(options.outdir, options.model))
-            devpath = os.path.join(options.outdir, 'dev_epoch_' + str(epoch + 1) + '.conll')
-            if options.conll_dev!='':
-                utils.write_conll(devpath, parser.Predict(options.conll_dev))
-                os.system('perl src/utils/eval.pl -g ' + options.conll_dev + ' -s ' + devpath + ' > ' + devpath + '.txt &')
-                print 'Finished predicting dev'
             parser.Save(os.path.join(options.outdir, options.model + str(epoch + 1)))
 
     if options.input and options.output:
