@@ -8,7 +8,7 @@ class SRLLSTM:
     def __init__(self, words, pos, roles, w2i, pl2i, options):
         self.model = Model()
         self.batch_size = options.batch
-        self.trainer = AdamTrainer(self.model, options.learning_rate)
+        self.trainer = MomentumSGDTrainer(self.model) #AdamTrainer(self.model, options.learning_rate)
         self.wordsCount = words
         self.words = {word: ind + 2 for word, ind in w2i.iteritems()}
         self.pred_lemmas = {pl: ind + 2 for pl, ind in pl2i.iteritems()}
