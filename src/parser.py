@@ -9,7 +9,7 @@ if __name__ == '__main__':
     parser.add_option("--train", dest="conll_train", help="Annotated CONLL train file", metavar="FILE",
                       default=None)
     parser.add_option("--dev", dest="conll_dev", help="Annotated CONLL dev file", metavar="FILE",
-                      default=None)
+                      default='')
     parser.add_option("--input", dest="input", help="Annotated CONLL test file", metavar="FILE",
                       default=None)
     parser.add_option("--output", dest="output", help="output file", metavar="FILE",
