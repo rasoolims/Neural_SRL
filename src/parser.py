@@ -4,8 +4,6 @@ import time
 import utils
 from optparse import OptionParser
 
-from srl import SRLLSTM
-
 if __name__ == '__main__':
     parser = OptionParser()
     parser.add_option("--train", dest="conll_train", help="Annotated CONLL train file", metavar="FILE",
@@ -31,9 +29,19 @@ if __name__ == '__main__':
     parser.add_option("--learning_rate", type="float", dest="learning_rate", default=0.01)
     parser.add_option("--epochs", type="int", dest="epochs", default=30)
     parser.add_option("--outdir", type="string", dest="outdir", default="results")
+    parser.add_option("--mem", type="int", dest="mem", default="2048")
 
     (options, args) = parser.parse_args()
     print 'Using external embedding:', options.external_embedding
+
+    import _dynet as dy
+    dyparams = dy.DynetParams()
+    # Fetch the command line arguments (optional)
+    dyparams.from_args()
+    # Set some parameters manualy (see the command line arguments documentation)
+    dyparams.set_mem(options.mem)
+    dyparams.init()
+    from srl import SRLLSTM
 
     if options.conll_train:
         print 'Preparing vocab'
