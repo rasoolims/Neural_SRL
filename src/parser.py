@@ -58,7 +58,7 @@ if __name__ == '__main__':
         for epoch in xrange(options.epochs):
             print 'Starting epoch', epoch
             parser.Train(options.conll_train, options.conll_dev, os.path.join(options.outdir, options.model))
-            parser.Save(os.path.join(options.outdir, options.model + str(epoch + 1)))
+            #todo parser.Save(os.path.join(options.outdir, options.model + str(epoch + 1)))
 
     if options.input and options.output:
         with open(options.params, 'r') as paramsfp:
