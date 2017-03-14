@@ -199,6 +199,7 @@ class SRLLSTM:
             if len(errs)>=self.batch_size:
                 sum_errs = esum(errs)
                 loss += sum_errs.scalar_value()
+                sum_errs.forward()
                 sum_errs.backward()
                 self.trainer.update()
                 renew_cg()
