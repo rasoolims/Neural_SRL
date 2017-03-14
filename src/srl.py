@@ -28,8 +28,9 @@ class SRLLSTM:
         self.masks = dict()
         for p in self.ipos:
             the_mask = [0]*len(self.iroles)
-            for r in possible_args[p]:
-                the_mask[self.roles[r]]=1
+            for r in self.roles.keys():
+                if not r in possible_args[p]:
+                    the_mask[self.roles[r]]= 10. ** 6
             self.masks[p]= the_mask
 
         self.external_embedding = None
@@ -146,13 +147,13 @@ class SRLLSTM:
                     w_l_r = rectify(U * (concatenate([u_l, v_r])))
                     ws.append(w_l_r)
                 W = transpose(concatenate_cols([w for w in ws]))
-                scores = cmult(softmax(W *cand), mask_vec)
+                scores = W *cand - mask_vec
                 argmax = np.argmax(scores.npvalue())
                 if argmax == gold_role:
                     correct+=1
                     role_correct[gold_role]+=1
                 role_all[gold_role]+=1
-                err =  -log(pick(scores, gold_role))
+                err =  pickneglogsoftmax(scores, gold_role)
                 errs.append(err)
         return errs,correct
 
@@ -177,7 +178,7 @@ class SRLLSTM:
                     w_l_r = rectify(U * (concatenate([u_l, v_r])))
                     ws.append(w_l_r)
                 W = transpose(concatenate_cols([w for w in ws]))
-                scores = cmult(softmax(W * cand), mask_vec)
+                scores = W * cand - mask_vec
                 #scores = WU * cand
                 sentence.entries[arg_index].predicateList[p] = self.iroles[np.argmax(scores.npvalue())]
 
