@@ -56,7 +56,7 @@ def vocab(conll_path):
                 semRelCount.update([pred])
 
         for i in xrange(len(sentence.predicates)):
-            pos = sentence.entries[sentence.predicates[i]].pos[:2]
+            pos = sentence.entries[sentence.predicates[i]].pos
             for j in xrange(len(sentence.entries)):
                 possible_args_for_pos[pos].add(sentence.entries[j].predicateList[i])
     return (wordsCount, {w: i for i, w in enumerate(wordsCount.keys())},

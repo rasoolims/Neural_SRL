@@ -28,7 +28,7 @@ class SRLLSTM:
         self.masks = dict()
         for p in self.ipos:
             the_mask = [0]*len(self.iroles)
-            for r in possible_args[p[:2]]:
+            for r in possible_args[p]:
                 the_mask[self.roles[r]]=1
             self.masks[p]= the_mask
 
