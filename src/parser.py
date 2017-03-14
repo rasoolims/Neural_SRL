@@ -58,6 +58,12 @@ if __name__ == '__main__':
             print 'Starting epoch', epoch
             parser.Train(options.conll_train, options.conll_dev, os.path.join(options.outdir, options.model))
             #todo parser.Save(os.path.join(options.outdir, options.model + str(epoch + 1)))
+            if options.conll_dev != '':
+                start = time.time()
+                utils.write_conll(options.conll_dev + str(epoch)+ '.txt', parser.Predict(options.conll_dev))
+                os.system(
+                    'perl src/utils/eval.pl -g ' + options.conll_dev + ' -s ' + options.conll_dev + str(epoch)+ '.txt' + ' > ' + options.conll_dev + str(epoch)+ '.eval &')
+                print 'Finished predicting dev; time:', time.time() - start
 
     if options.input and options.output:
         with open(options.params, 'r') as paramsfp:
