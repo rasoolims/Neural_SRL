@@ -5,15 +5,16 @@ import numpy as np
 from collections import  defaultdict
 
 class SRLLSTM:
-    def __init__(self, words, pos, roles, w2i, pl2i, options):
+    def __init__(self, words, pos, roles, w2i, pl2i, possible_args, options):
         self.model = Model()
         self.batch_size = options.batch
         self.trainer = AdamTrainer(self.model, options.learning_rate)
         self.wordsCount = words
         self.words = {word: ind + 2 for word, ind in w2i.iteritems()}
         self.pred_lemmas = {pl: ind + 2 for pl, ind in pl2i.iteritems()}
-        self.pos = {word: ind for ind, word in enumerate(pos)}
-        self.roles = {word: ind for ind, word in enumerate(roles)}
+        self.pos = {p: ind for ind, p in enumerate(pos)}
+        self.ipos = pos
+        self.roles = {r: ind for ind, r in enumerate(roles)}
         self.iroles = roles
         self.d_w = options.d_w
         self.d_pos = options.d_pos
@@ -23,6 +24,13 @@ class SRLLSTM:
         self.d_prime_l = options.d_prime_l
         self.k = options.k
         self.alpha = options.alpha
+
+        self.masks = dict()
+        for p in self.ipos:
+            the_mask = [0]*len(self.iroles)
+            for r in possible_args[p[:2]]:
+                the_mask[self.roles[r]]=1
+            self.masks[p]= the_mask
 
         self.external_embedding = None
         self.x_pe = None
@@ -120,6 +128,7 @@ class SRLLSTM:
         #WU = parameter(self.WU)
         for p in xrange(len(sentence.predicates)):
             pred_index = sentence.predicates[p]
+            mask_vec = inputVector(self.masks[sentence.entries[pred_index].pos])
             c = float(self.wordsCount.get(sentence.entries[pred_index].norm, 0))
             v_p = bilstms[pred_index]
 
@@ -137,14 +146,13 @@ class SRLLSTM:
                     w_l_r = rectify(U * (concatenate([u_l, v_r])))
                     ws.append(w_l_r)
                 W = transpose(concatenate_cols([w for w in ws]))
-                scores = W *cand
-                #scores = WU*cand
+                scores = cmult(softmax(W *cand), mask_vec)
                 argmax = np.argmax(scores.npvalue())
                 if argmax == gold_role:
                     correct+=1
                     role_correct[gold_role]+=1
                 role_all[gold_role]+=1
-                err = pickneglogsoftmax(scores, gold_role)
+                err =  -log(pick(scores, gold_role))
                 errs.append(err)
         return errs,correct
 
@@ -154,6 +162,7 @@ class SRLLSTM:
         #WU = parameter(self.WU)
         for p in xrange(len(sentence.predicates)):
             pred_index = sentence.predicates[p]
+            mask_vec = inputVector(self.masks[sentence.entries[pred_index].pos])
             pred_lemma_index = 0 if sentence.entries[pred_index].lemma not in self.pred_lemmas \
                 else self.pred_lemmas[sentence.entries[pred_index].lemma]
             v_p = bilstms[pred_index]
@@ -168,7 +177,7 @@ class SRLLSTM:
                     w_l_r = rectify(U * (concatenate([u_l, v_r])))
                     ws.append(w_l_r)
                 W = transpose(concatenate_cols([w for w in ws]))
-                scores = W * cand
+                scores = cmult(softmax(W * cand), mask_vec)
                 #scores = WU * cand
                 sentence.entries[arg_index].predicateList[p] = self.iroles[np.argmax(scores.npvalue())]
 

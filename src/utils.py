@@ -42,6 +42,7 @@ def vocab(conll_path):
     posCount = Counter()
     semRelCount = Counter()
     predicate_lemmas = set()
+    possible_args_for_pos = defaultdict(set)
 
     for sentence in read_conll(conll_path):
         wordsCount.update([node.norm for node in sentence.entries])
@@ -53,9 +54,14 @@ def vocab(conll_path):
                 predicate_lemmas.add(node.lemma)
             for pred in node.predicateList.values():
                 semRelCount.update([pred])
+
+        for i in xrange(len(sentence.predicates)):
+            pos = sentence.entries[sentence.predicates[i]].pos[:2]
+            for j in xrange(len(sentence.entries)):
+                possible_args_for_pos[pos].add(sentence.entries[j].predicateList[i])
     return (wordsCount, {w: i for i, w in enumerate(wordsCount.keys())},
-            posCount.keys(), semRelCount.keys(),
-            {w: i for i, w in enumerate(predicate_lemmas)},)
+            {w: i for i, w in enumerate(posCount)}, semRelCount.keys(),
+            {w: i for i, w in enumerate(predicate_lemmas)},possible_args_for_pos)
 
 
 def read_conll(fh):
