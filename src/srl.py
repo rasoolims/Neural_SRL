@@ -207,7 +207,7 @@ class SRLLSTM:
                 corrects = 0
                 o = []
                 for role in role_all.keys():
-                    o.append(self.iroles[role]+':'+str(round(float(role_correct[role])/role_all[role],2)))
+                    o.append(self.iroles[role]+':'+str(round(float(role_correct[role])/role_all[role],2))+'-'+str(role_all[role]))
                 print '\t'.join(o)
                 role_correct = defaultdict(int)
                 role_all = defaultdict(int)
