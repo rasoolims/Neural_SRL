@@ -56,19 +56,13 @@ class SRLLSTM:
         self.inp_dim = self.d_w + self.d_l + self.d_pos + (
         self.edim if self.external_embedding is not None else 0) + 1  # 1 for predicate indicator
 
-        # k-layered bilstm
-        self.deep_lstms = [[LSTMBuilder(1, self.inp_dim, self.d_h, self.model),
-                            LSTMBuilder(1, self.inp_dim, self.d_h, self.model)]] \
-                          + [[LSTMBuilder(1, self.d_h * 2, self.d_h, self.model),
-                              LSTMBuilder(1, self.d_h * 2, self.d_h, self.model)] for i in xrange(self.k - 1)]
-
+        self.deep_lstms = BiRNNBuilder(self.k, self.inp_dim, self.d_h, self.model, LSTMBuilder)
         self.x_re = self.model.add_lookup_parameters((len(self.words) + 2, self.d_w))
         self.x_le = self.model.add_lookup_parameters((len(self.pred_lemmas) + 2, self.d_l))
         self.x_pos = self.model.add_lookup_parameters((len(pos), self.d_pos))
         self.u_l = self.model.add_lookup_parameters((len(self.pred_lemmas) + 2, self.d_prime_l))
         self.v_r = self.model.add_lookup_parameters((len(self.roles), self.d_r))
-        self.U = self.model.add_parameters((self.d_h * 4, self.d_r + self.d_prime_l))
-        #self.WU = self.model.add_parameters((len(self.roles), self.d_h * 4))
+        self.U = self.model.add_parameters((self.d_h * 2, self.d_r + self.d_prime_l))
         self.empty_lemma_embed = inputVector([0]*self.d_l)
 
     def Save(self, filename):
@@ -99,28 +93,9 @@ class SRLLSTM:
                     x_pe.append(self.x_pe[0])
             else:
                 x_pe.append(None)
-
         seq_input = [concatenate(filter(None, [x_re[i], x_pe[i], x_pos[i], x_le[i], pred_bool[i]])) for i in
                      xrange(len(x_re))]
-        f_init, b_init = [b.initial_state() for b in self.deep_lstms[0]]
-        fw = [x.output() for x in f_init.add_inputs(seq_input)]
-        bw = [x.output() for x in b_init.add_inputs(reversed(seq_input))]
-        layer_inputs = []
-        input_0 = []
-        for i in xrange(len(x_re)):
-            input_0.append(concatenate(filter(None, [fw[i], bw[len(x_re) - 1 - i]])))
-        layer_inputs.append(input_0)
-
-        for i in xrange(self.k - 1):
-            f_init_i, b_init_i = [b.initial_state() for b in self.deep_lstms[i + 1]]
-            fw_i = [x.output() for x in f_init_i.add_inputs(layer_inputs[-1])]
-            bw_i = [x.output() for x in b_init_i.add_inputs(reversed(layer_inputs[-1]))]
-            input_i = []
-            for j in xrange(len(fw_i)):
-                input_i.append(concatenate(filter(None, [fw_i[j], bw_i[len(fw_i) - 1 - j]])))
-            layer_inputs.append(input_i)
-
-        return layer_inputs[-1]
+        return self.deep_lstms.transduce(seq_input)
 
     def buildGraph(self, sentence, correct, role_correct, role_all):
         errs = []
