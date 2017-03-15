@@ -152,6 +152,8 @@ class SRLLSTM:
                 if argmax == gold_role:
                     correct+=1
                     role_correct[gold_role]+=1
+                if gold_role != self.roles['_']:
+                    pass
                 role_all[gold_role]+=1
                 err =  pickneglogsoftmax(scores, gold_role)
                 errs.append(err)
@@ -197,9 +199,8 @@ class SRLLSTM:
             errs+= e
 
             if len(errs)>=self.batch_size:
-                sum_errs = esum(errs)
+                sum_errs = sum_batches(esum(errs))
                 loss += sum_errs.scalar_value()
-                sum_errs.forward()
                 sum_errs.backward()
                 self.trainer.update()
                 renew_cg()
