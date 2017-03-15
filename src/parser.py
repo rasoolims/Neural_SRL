@@ -60,9 +60,9 @@ if __name__ == '__main__':
             #todo parser.Save(os.path.join(options.outdir, options.model + str(epoch + 1)))
             if options.conll_dev != '':
                 start = time.time()
-                utils.write_conll(options.conll_dev + str(epoch)+ '.txt', parser.Predict(options.conll_dev))
+                utils.write_conll(os.path.join(options.outdir, options.model) + str(epoch)+ '.txt', parser.Predict(options.conll_dev))
                 os.system(
-                    'perl src/utils/eval.pl -g ' + options.conll_dev + ' -s ' + options.conll_dev + str(epoch)+ '.txt' + ' > ' + options.conll_dev + str(epoch)+ '.eval &')
+                    'perl src/utils/eval.pl -g ' + options.conll_dev + ' -s ' +  os.path.join(options.outdir, options.model) + str(epoch)+ '.txt' + ' > ' +  os.path.join(options.outdir, options.model) + str(epoch)+ '.eval &')
                 print 'Finished predicting dev; time:', time.time() - start
 
     if options.input and options.output:
