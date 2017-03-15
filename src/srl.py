@@ -101,7 +101,6 @@ class SRLLSTM:
         errs = []
         bilstms = self.getBilstmFeatures(sentence.entries, True)
         U = parameter(self.U)
-        #WU = parameter(self.WU)
         for p in xrange(len(sentence.predicates)):
             pred_index = sentence.predicates[p]
             mask_vec = inputVector(self.masks[sentence.entries[pred_index].pos])
@@ -116,12 +115,8 @@ class SRLLSTM:
                 v_i = bilstms[arg_index]
                 cand = concatenate([v_i, v_p])
                 u_l = self.u_l[pred_lemma_index]
-                ws = []
-                for role in xrange(len(self.roles)):
-                    v_r = self.v_r[role]
-                    w_l_r = rectify(U * (concatenate([u_l, v_r])))
-                    ws.append(w_l_r)
-                W = transpose(concatenate_cols([w for w in ws]))
+                W = transpose(concatenate_cols(
+                    [rectify(U * (concatenate([u_l, self.v_r[role]]))) for role in xrange(len(self.roles))]))
                 scores = W *cand - mask_vec
                 argmax = np.argmax(scores.npvalue())
                 if argmax == gold_role:
@@ -137,7 +132,6 @@ class SRLLSTM:
     def decode(self, sentence):
         bilstms = self.getBilstmFeatures(sentence.entries, False)
         U = parameter(self.U)
-        #WU = parameter(self.WU)
         for p in xrange(len(sentence.predicates)):
             pred_index = sentence.predicates[p]
             mask_vec = inputVector(self.masks[sentence.entries[pred_index].pos])
@@ -149,14 +143,9 @@ class SRLLSTM:
                 v_i = bilstms[arg_index]
                 cand = concatenate([v_i, v_p])
                 u_l = self.u_l[pred_lemma_index]
-                ws = []
-                for role in xrange(len(self.roles)):
-                    v_r = self.v_r[role]
-                    w_l_r = rectify(U * (concatenate([u_l, v_r])))
-                    ws.append(w_l_r)
-                W = transpose(concatenate_cols([w for w in ws]))
+                W = transpose(concatenate_cols(
+                    [rectify(U * (concatenate([u_l, self.v_r[role]]))) for role in xrange(len(self.roles))]))
                 scores = W * cand - mask_vec
-                #scores = WU * cand
                 sentence.entries[arg_index].predicateList[p] = self.iroles[np.argmax(scores.npvalue())]
 
     def Train(self, conll_path, dev_path, model_path):
