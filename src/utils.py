@@ -31,7 +31,7 @@ class ConllEntry:
                       str(self.parent_id),
                       str(self.parent_id), self.relation, self.relation,
                       '_' if self.sense == '_' else 'Y',
-                      self.sense, '_']
+                      self.sense]
         for p in self.predicateList.values():
             entry_list.append(p)
         return '\t'.join(entry_list)
