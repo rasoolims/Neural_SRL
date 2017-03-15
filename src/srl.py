@@ -93,7 +93,8 @@ class SRLLSTM:
                     x_pe.append(self.x_pe[0])
             else:
                 x_pe.append(None)
-        seq_input = [concatenate(filter(None, [x_re[i], x_pe[i], x_pos[i], x_le[i], pred_bool[i]])) for i in xrange(len(x_re))]
+        seq_input = [concatenate(filter(None, [x_re[i], x_pe[i], x_pos[i], x_le[i], pred_bool[i]])) for i in
+                     xrange(len(x_re))]
         return self.deep_lstms.transduce(seq_input)
 
     def buildGraph(self, sentence, correct, role_correct, role_all):
@@ -115,12 +116,13 @@ class SRLLSTM:
                 v_i = bilstms[arg_index]
                 cand = concatenate([v_i, v_p])
                 u_l = self.u_l[pred_lemma_index]
-                score_list = []
+                ws = []
                 for role in xrange(len(self.roles)):
                     v_r = self.v_r[role]
-                    w_l_r = transpose(rectify(U * (concatenate([u_l, v_r]))))
-                    score_list.append(w_l_r * cand)
-                scores = concatenate(score_list) - mask_vec
+                    w_l_r = rectify(U * (concatenate([u_l, v_r])))
+                    ws.append(w_l_r)
+                W = transpose(concatenate_cols([w for w in ws]))
+                scores = W *cand - mask_vec
                 argmax = np.argmax(scores.npvalue())
                 if argmax == gold_role:
                     correct+=1
@@ -142,16 +144,19 @@ class SRLLSTM:
             pred_lemma_index = 0 if sentence.entries[pred_index].lemma not in self.pred_lemmas \
                 else self.pred_lemmas[sentence.entries[pred_index].lemma]
             v_p = bilstms[pred_index]
+
             for arg_index in xrange(len(sentence.entries)):
                 v_i = bilstms[arg_index]
                 cand = concatenate([v_i, v_p])
                 u_l = self.u_l[pred_lemma_index]
-                score_list = []
+                ws = []
                 for role in xrange(len(self.roles)):
                     v_r = self.v_r[role]
-                    w_l_r = transpose(rectify(U * (concatenate([u_l, v_r]))))
-                    score_list.append(w_l_r*cand)
-                scores = concatenate(score_list) - mask_vec
+                    w_l_r = rectify(U * (concatenate([u_l, v_r])))
+                    ws.append(w_l_r)
+                W = transpose(concatenate_cols([w for w in ws]))
+                scores = W * cand - mask_vec
+                #scores = WU * cand
                 sentence.entries[arg_index].predicateList[p] = self.iroles[np.argmax(scores.npvalue())]
 
     def Train(self, conll_path, dev_path, model_path):
