@@ -97,7 +97,7 @@ class SRLLSTM:
                      xrange(len(x_re))]
         return self.deep_lstms.transduce(seq_input)
 
-    def buildGraph(self, sentence, correct, role_correct, role_all):
+    def buildGraph(self, sentence, correct):
         errs = []
         bilstms = self.getBilstmFeatures(sentence.entries, True)
         U = parameter(self.U)
@@ -121,10 +121,6 @@ class SRLLSTM:
                 argmax = np.argmax(scores.npvalue())
                 if argmax == gold_role:
                     correct+=1
-                    role_correct[gold_role]+=1
-                if gold_role != self.roles['_']:
-                    pass
-                role_all[gold_role]+=1
                 err =  pickneglogsoftmax(scores, gold_role)
                 errs.append(err)
         return errs,correct
@@ -155,11 +151,9 @@ class SRLLSTM:
         errs = []
         loss = 0
         corrects = 0
-        role_correct = defaultdict(int)
-        role_all = defaultdict(int)
         iters = 0
         for iSentence, sentence in enumerate(shuffledData):
-            e, corrects = self.buildGraph(sentence, corrects, role_correct, role_all)
+            e, corrects = self.buildGraph(sentence, corrects)
             errs+= e
 
             if len(errs)>=self.batch_size:
@@ -171,12 +165,6 @@ class SRLLSTM:
                 print 'loss:', loss / len(errs), 'time:', time.time() - start, 'sen#',(iSentence+1), 'instances',len(errs), 'correct', round(100*float(corrects)/len(errs),2)
                 errs = []
                 corrects = 0
-                o = []
-                for role in role_all.keys():
-                    o.append(self.iroles[role]+'('+str(role_all[role])+'):'+str(round(float(role_correct[role])/role_all[role],2)))
-                print '\t'.join(o)
-                role_correct = defaultdict(int)
-                role_all = defaultdict(int)
                 loss = 0
 
                 start = time.time()
