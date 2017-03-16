@@ -130,7 +130,6 @@ class SRLLSTM:
         U = parameter(self.U)
         for p in xrange(len(sentence.predicates)):
             pred_index = sentence.predicates[p]
-            mask_vec = inputVector(self.masks[sentence.entries[pred_index].pos])
             pred_lemma_index = 0 if sentence.entries[pred_index].lemma not in self.pred_lemmas \
                 else self.pred_lemmas[sentence.entries[pred_index].lemma]
             v_p = bilstms[pred_index]
@@ -141,7 +140,7 @@ class SRLLSTM:
                 u_l = self.u_l[pred_lemma_index]
                 W = transpose(concatenate_cols(
                     [rectify(U * (concatenate([u_l, self.v_r[role]]))) for role in xrange(len(self.roles))]))
-                scores = W * cand - mask_vec
+                scores = W * cand
                 sentence.entries[arg_index].predicateList[p] = self.iroles[np.argmax(scores.npvalue())]
 
     def Train(self, conll_path, dev_path, model_path):
