@@ -106,17 +106,15 @@ class SRLLSTM:
             mask_vec = inputVector(self.masks[sentence.entries[pred_index].pos])
             c = float(self.wordsCount.get(sentence.entries[pred_index].norm, 0))
             v_p = bilstms[pred_index]
-
+            word_drop = random.random() < 1.0 - (c / (self.alpha + c))
+            pred_lemma_index = 0 if word_drop or sentence.entries[pred_index].lemma not in self.pred_lemmas \
+                else self.pred_lemmas[sentence.entries[pred_index].lemma]
+            u_l = self.u_l[pred_lemma_index]
+            W = transpose(concatenate_cols([rectify(U * (concatenate([u_l, self.v_r[role]]))) for role in xrange(len(self.roles))]))
             for arg_index in xrange(len(sentence.entries)):
                 gold_role = self.roles[sentence.entries[arg_index].predicateList[p]]
-                word_drop = random.random() < 1.0 - (c / (self.alpha + c))
-                pred_lemma_index = 0 if word_drop or sentence.entries[pred_index].lemma not in self.pred_lemmas \
-                    else self.pred_lemmas[sentence.entries[pred_index].lemma]
                 v_i = bilstms[arg_index]
                 cand = concatenate([v_i, v_p])
-                u_l = self.u_l[pred_lemma_index]
-                W = transpose(concatenate_cols(
-                    [rectify(U * (concatenate([u_l, self.v_r[role]]))) for role in xrange(len(self.roles))]))
                 scores = W *cand - mask_vec
                 argmax = np.argmax(scores.npvalue())
                 if argmax == gold_role:
@@ -133,13 +131,11 @@ class SRLLSTM:
             pred_lemma_index = 0 if sentence.entries[pred_index].lemma not in self.pred_lemmas \
                 else self.pred_lemmas[sentence.entries[pred_index].lemma]
             v_p = bilstms[pred_index]
-
+            u_l = self.u_l[pred_lemma_index]
+            W = transpose(concatenate_cols([rectify(U * (concatenate([u_l, self.v_r[role]]))) for role in xrange(len(self.roles))]))
             for arg_index in xrange(len(sentence.entries)):
                 v_i = bilstms[arg_index]
                 cand = concatenate([v_i, v_p])
-                u_l = self.u_l[pred_lemma_index]
-                W = transpose(concatenate_cols(
-                    [rectify(U * (concatenate([u_l, self.v_r[role]]))) for role in xrange(len(self.roles))]))
                 scores = W * cand
                 sentence.entries[arg_index].predicateList[p] = self.iroles[np.argmax(scores.npvalue())]
 
