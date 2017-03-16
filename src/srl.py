@@ -56,13 +56,13 @@ class SRLLSTM:
         self.inp_dim = self.d_w + self.d_l + self.d_pos + (
         self.edim if self.external_embedding is not None else 0) + 1  # 1 for predicate indicator
 
-        self.deep_lstms = BiRNNBuilder(self.k, self.inp_dim, self.d_h, self.model, LSTMBuilder)
+        self.deep_lstms = BiRNNBuilder(self.k, self.inp_dim, 2*self.d_h, self.model, LSTMBuilder)
         self.x_re = self.model.add_lookup_parameters((len(self.words) + 2, self.d_w))
         self.x_le = self.model.add_lookup_parameters((len(self.pred_lemmas) + 2, self.d_l))
         self.x_pos = self.model.add_lookup_parameters((len(pos), self.d_pos))
         self.u_l = self.model.add_lookup_parameters((len(self.pred_lemmas) + 2, self.d_prime_l))
         self.v_r = self.model.add_lookup_parameters((len(self.roles), self.d_r))
-        self.U = self.model.add_parameters((self.d_h * 2, self.d_r + self.d_prime_l))
+        self.U = self.model.add_parameters((self.d_h * 4, self.d_r + self.d_prime_l))
         self.empty_lemma_embed = inputVector([0]*self.d_l)
 
     def Save(self, filename):
