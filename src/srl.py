@@ -82,17 +82,17 @@ class SRLLSTM:
         self.empty_lemma_embed = inputVector([0] * self.d_l)
 
         char_lstms = []
-        for ent in sentence:
-            word_chars = ['<s>'] + list(ent.form) + ['</s>']
-            if self.char_lstm_dim > 0:
+
+        if self.char_lstm_dim > 0:
+            for ent in sentence:
+                word_chars = ['<s>'] + list(ent.form) + ['</s>']
                 if train:
                     char_lstms.append(self.char_lstms.transduce(
                         [self.x_char[self.chars[c]] if random.random() >= 0.001 else self.x_char[self.chars[' ']] for c in word_chars]))
                 else:
                     char_lstms.append(self.char_lstms.transduce(
                         [self.x_char[self.chars[c]] if c in self.chars else self.x_char[self.chars[' ']] for c in word_chars]))
-            else:
-                char_lstms.append([None])
+        if self.char_lstm_dim==0: char_lstms = [[None] for i in xrange(len(sentence))]
         # first extracting embedding features.
         for root in sentence:
             c = float(self.wordsCount.get(root.norm, 0))
