@@ -8,7 +8,7 @@ class SRLLSTM:
     def __init__(self, words, pos, roles, w2i, pl2i, possible_args, options):
         self.model = Model()
         self.batch_size = options.batch
-        self.trainer = AdamTrainer(self.model, options.learning_rate, 0.9, 0.9, 1e-4)
+        self.trainer = AdamTrainer(self.model, options.learning_rate)
         self.wordsCount = words
         self.words = {word: ind + 2 for word, ind in w2i.iteritems()}
         self.pred_lemmas = {pl: ind + 2 for pl, ind in pl2i.iteritems()}
@@ -143,34 +143,20 @@ class SRLLSTM:
         start = time.time()
         shuffledData = list(read_conll(conll_path))
         random.shuffle(shuffledData)
-        errs = []
-        loss = 0
-        corrects = 0
-        iters = 0
-        sen_num = 0
+        errs,loss,corrects,iters,sen_num = [],0,0,0,0
         for iSentence, sentence in enumerate(shuffledData):
             e, corrects = self.buildGraph(sentence, corrects)
             errs+= e
             sen_num+=1
-
             if sen_num>=self.batch_size:
-                sen_num = 0
                 sum_errs = sum_batches(esum(errs))
                 loss += sum_errs.scalar_value()
                 sum_errs.backward()
                 self.trainer.update()
                 renew_cg()
                 print 'loss:', loss / len(errs), 'time:', time.time() - start, 'sen#',(iSentence+1), 'instances',len(errs), 'correct', round(100*float(corrects)/len(errs),2)
-                errs = []
-                corrects = 0
-                loss = 0
-
-                start = time.time()
+                errs, loss, corrects, sen_num = [], 0, 0, 0
                 iters+=1
-                if iters%100==0 and dev_path!='':
-                    write_conll(model_path+'.txt', self.Predict(dev_path))
-                    os.system('perl src/utils/eval.pl -g ' + dev_path + ' -s ' + model_path+'.txt' + ' > ' + model_path+'.eval &')
-                    print 'Finished predicting dev; time:', time.time() - start
                 start = time.time()
         self.trainer.update_epoch()
 

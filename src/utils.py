@@ -1,7 +1,6 @@
 from collections import Counter, defaultdict
 import re, codecs
 
-
 class ConllStruct:
     def __init__(self, entries, predicates):
         self.entries = entries
@@ -9,7 +8,6 @@ class ConllStruct:
 
     def __len__(self):
         return len(self.entries)
-
 
 class ConllEntry:
     def __init__(self, id, form, lemma, pos, sense='_', parent_id=-1, relation='_', predicateList=dict(),
@@ -35,7 +33,6 @@ class ConllEntry:
         for p in self.predicateList.values():
             entry_list.append(p)
         return '\t'.join(entry_list)
-
 
 def vocab(conll_path):
     wordsCount = Counter()
@@ -63,7 +60,6 @@ def vocab(conll_path):
             {w: i for i, w in enumerate(posCount)}, semRelCount.keys(),
             {w: i for i, w in enumerate(predicate_lemmas)},possible_args_for_pos)
 
-
 def read_conll(fh):
     sentences = codecs.open(fh, 'r').read().strip().split('\n\n')
     read = 0
@@ -89,7 +85,6 @@ def read_conll(fh):
         yield ConllStruct(words, predicates)
     print read, 'sentences read.'
 
-
 def write_conll(fn, conll_structs):
     with codecs.open(fn, 'w') as fh:
         for conll_struct in conll_structs:
@@ -99,9 +94,6 @@ def write_conll(fn, conll_structs):
                 fh.write('\n')
             fh.write('\n')
 
-
 numberRegex = re.compile("[0-9]+|[0-9]+\\.[0-9]+|[0-9]+[0-9,]+");
-
-
 def normalize(word):
     return 'NUM' if numberRegex.match(word) else word.lower()
