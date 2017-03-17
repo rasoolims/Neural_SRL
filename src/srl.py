@@ -147,11 +147,14 @@ class SRLLSTM:
         loss = 0
         corrects = 0
         iters = 0
+        sen_num = 0
         for iSentence, sentence in enumerate(shuffledData):
             e, corrects = self.buildGraph(sentence, corrects)
             errs+= e
+            sen_num+=1
 
-            if len(errs)>=self.batch_size:
+            if sen_num>=self.batch_size:
+                sen_num = 0
                 sum_errs = sum_batches(esum(errs))
                 loss += sum_errs.scalar_value()
                 sum_errs.backward()
