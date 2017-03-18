@@ -82,7 +82,6 @@ class SRLLSTM:
         self.empty_lemma_embed = inputVector([0] * self.d_l)
 
         char_lstms = []
-
         if self.char_lstm_dim > 0:
             for ent in sentence:
                 word_chars = ['<s>'] + list(ent.form) + ['</s>']
