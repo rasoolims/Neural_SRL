@@ -30,6 +30,7 @@ if __name__ == '__main__':
     parser.add_option("--mem", type="int", dest="mem", default="2048")
     parser.add_option("--save_epoch", action="store_true", dest="save_epoch", default=False, help='Save each epoch.')
     parser.add_option("--char", action="store_true", dest="use_char_lstm", default=False, help='Use char LSTM.')
+    parser.add_option("--margin", action="store_true", dest="margin_loss", default=False, help='Use max margin loss instead of cross-entropy.')
 
     (options, args) = parser.parse_args()
     print 'Using external embedding:', options.external_embedding

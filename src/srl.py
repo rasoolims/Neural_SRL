@@ -26,6 +26,7 @@ class SRLLSTM:
         self.d_prime_l = options.d_prime_l
         self.k = options.k
         self.alpha = options.alpha
+        self.use_margin = options.margin_loss
 
         self.masks = dict()
         for p in self.ipos:
@@ -133,10 +134,18 @@ class SRLLSTM:
                 v_i = bilstms[arg_index]
                 cand = concatenate([v_i, v_p])
                 scores = W *cand - mask_vec
-                argmax = np.argmax(scores.npvalue())
+                sc = scores.npvalue()
+                argmax = np.argmax(sc)
                 if argmax == gold_role:
                     correct+=1
-                err =  pickneglogsoftmax(scores, gold_role)
+
+                if not self.use_margin:
+                    err =  pickneglogsoftmax(scores, gold_role)
+                else:
+                    best_wrong = sc[argmax]
+                    if argmax == gold_role:
+                        best_wrong = sorted(sc)[-2]
+                    err = scalarInput(max(0, 1 + best_wrong - sc[gold_role]))
                 errs.append(err)
         return errs,correct
 
