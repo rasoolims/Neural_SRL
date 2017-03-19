@@ -174,7 +174,7 @@ class SRLLSTM:
             e, corrects = self.buildGraph(sentence, corrects)
             errs+= e
             sen_num+=1
-            if sen_num>=self.batch_size:
+            if sen_num>=self.batch_size and len(errs)>0:
                 sum_errs = sum_batches(esum(errs))
                 loss += sum_errs.scalar_value()
                 sum_errs.backward()
