@@ -100,7 +100,8 @@ class SRLLSTM:
             word_drop = train and (random.random() < 1.0 - (c / (self.alpha + c)))
             x_re.append(lookup(self.x_re, int(self.words.get(token.norm, 0)) if not word_drop else 0))
             # just have lemma embedding for predicates
-            x_le.append(lookup(self.x_le, int(self.lemmas.get(token.lemma, 0)) if not word_drop else 0)) if (token.is_pred or self.use_all_lemma) else x_le.append(self.lemmas.get(token.lemma, 1))
+            x_le.append(lookup(self.x_le, int(self.lemmas.get(token.lemma, 0)) if not word_drop else 0)) \
+                if (token.is_pred or self.use_all_lemma) else x_le.append(lookup(self.x_le, int(self.lemmas.get(token.lemma, 1))))
             x_pos.append(lookup(self.x_pos, int(self.pos[token.pos])))
             pred_bool.append(inputVector([1])) if token.is_pred else pred_bool.append(inputVector([0]))
             if self.external_embedding is not None:
