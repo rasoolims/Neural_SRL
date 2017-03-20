@@ -34,14 +34,13 @@ class ConllEntry:
             entry_list.append(p)
         return '\t'.join(entry_list)
 
-def vocab(conll_path,use_all_lemmas):
+def vocab(conll_path):
     wordsCount = Counter()
     posCount = Counter()
     semRelCount = Counter()
-    predicate_lemmas = Counter()
+    predicate_lemmas = set()
     possible_args_for_pos = defaultdict(set)
     chars = Counter()
-    lemmas = Counter()
     chars.update([' ', '<s>', '</s>'])
 
     for sentence in read_conll(conll_path):
@@ -51,9 +50,7 @@ def vocab(conll_path,use_all_lemmas):
             if node.predicateList == None:
                 continue
             if node.is_pred:
-                predicate_lemmas.update([node.lemma])
-            if node.is_pred or use_all_lemmas:
-                lemmas.update([node.lemma])
+                predicate_lemmas.add(node.lemma)
             for pred in node.predicateList.values():
                 semRelCount.update([pred])
             chars.update([c for c in list(node.form)])
@@ -65,8 +62,7 @@ def vocab(conll_path,use_all_lemmas):
     return (wordsCount, {w: i for i, w in enumerate(wordsCount.keys())},
             {p: i for i, p in enumerate(posCount)}, semRelCount.keys(),
             {w: i for i, w in enumerate(predicate_lemmas)},possible_args_for_pos,
-            {c: i for i, c in enumerate(chars)},
-            {w: i for i, w in enumerate(lemmas)})
+            {c: i for i, c in enumerate(chars)})
 
 def read_conll(fh):
     sentences = codecs.open(fh, 'r').read().strip().split('\n\n')
