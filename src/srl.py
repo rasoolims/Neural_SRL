@@ -84,19 +84,19 @@ class SRLLSTM:
                         [self.x_char[self.chars[c]] if c in self.chars else self.x_char[self.chars[' ']] for c in word_chars]))
         if self.char_lstm_dim==0: char_lstms = [[None] for i in xrange(len(sentence))]
         # first extracting embedding features.
-        for root in sentence:
-            c = float(self.wordsCount.get(root.norm, 0))
+        for token in sentence:
+            c = float(self.wordsCount.get(token.norm, 0))
             word_drop = train and (random.random() < 1.0 - (c / (self.alpha + c)))
-            x_re.append(lookup(self.x_re, int(self.words.get(root.norm, 0)) if not word_drop else 0))
+            x_re.append(lookup(self.x_re, int(self.words.get(token.norm, 0)) if not word_drop else 0))
             # just have lemma embedding for predicates
-            x_le.append(lookup(self.x_le, int(self.pred_lemmas.get(root.lemma, 0)) if not word_drop else 0)) if root.is_pred else x_le.append(self.empty_lemma_embed)
-            x_pos.append(lookup(self.x_pos, int(self.pos[root.pos])))
-            pred_bool.append(inputVector([1])) if root.is_pred else pred_bool.append(inputVector([0]))
+            x_le.append(lookup(self.x_le, int(self.pred_lemmas.get(token.lemma, 0)) if not word_drop else 0)) if token.is_pred else x_le.append(self.empty_lemma_embed)
+            x_pos.append(lookup(self.x_pos, int(self.pos[token.pos])))
+            pred_bool.append(inputVector([1])) if token.is_pred else pred_bool.append(inputVector([0]))
             if self.external_embedding is not None:
-                if root.form in self.external_embedding:
-                    x_pe.append(self.x_pe[self.x_pe_dict[root.form]])
-                elif root.norm in self.external_embedding:
-                    x_pe.append(self.x_pe[self.x_pe_dict[root.norm]])
+                if token.form in self.external_embedding:
+                    x_pe.append(self.x_pe[self.x_pe_dict[token.form]])
+                elif token.norm in self.external_embedding:
+                    x_pe.append(self.x_pe[self.x_pe_dict[token.norm]])
                 else:
                     x_pe.append(self.x_pe[0])
             else:
@@ -111,7 +111,6 @@ class SRLLSTM:
         U = parameter(self.U)
         for p in xrange(len(sentence.predicates)):
             pred_index = sentence.predicates[p]
-            #mask_vec = inputVector(self.masks[sentence.entries[pred_index].pos])
             c = float(self.wordsCount.get(sentence.entries[pred_index].norm, 0))
             v_p = bilstms[pred_index]
             word_drop = random.random() < 1.0 - (c / (self.alpha + c))
@@ -123,7 +122,7 @@ class SRLLSTM:
                 gold_role = self.roles[sentence.entries[arg_index].predicateList[p]]
                 v_i = bilstms[arg_index]
                 cand = concatenate([v_i, v_p])
-                scores = W *cand #- mask_vec
+                scores = W *cand
                 sc = scores.npvalue()
                 argmax = np.argmax(sc)
                 if argmax == gold_role:
@@ -148,7 +147,7 @@ class SRLLSTM:
                 scores = W * cand
                 sentence.entries[arg_index].predicateList[p] = self.iroles[np.argmax(scores.npvalue())]
 
-    def Train(self, conll_path, dev_path, model_path):
+    def Train(self, conll_path):
         start = time.time()
         shuffledData = list(read_conll(conll_path))
         random.shuffle(shuffledData)

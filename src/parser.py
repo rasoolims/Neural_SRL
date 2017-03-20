@@ -54,7 +54,7 @@ if __name__ == '__main__':
         parser = SRLLSTM(words, pos, semRels, w2i, pl2i, chars,options)
         for epoch in xrange(options.epochs):
             print 'Starting epoch', epoch
-            parser.Train(options.conll_train, options.conll_dev, os.path.join(options.outdir, options.model))
+            parser.Train(options.conll_train)
             if options.save_epoch:  parser.Save(os.path.join(options.outdir, options.model + str(epoch + 1)))
             if options.conll_dev != '':
                 start = time.time()
