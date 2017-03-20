@@ -39,7 +39,6 @@ def vocab(conll_path):
     posCount = Counter()
     semRelCount = Counter()
     predicate_lemmas = set()
-    possible_args_for_pos = defaultdict(set)
     chars = Counter()
     chars.update([' ', '<s>', '</s>'])
 
@@ -55,13 +54,9 @@ def vocab(conll_path):
                 semRelCount.update([pred])
             chars.update([c for c in list(node.form)])
 
-        for i in xrange(len(sentence.predicates)):
-            pos = sentence.entries[sentence.predicates[i]].pos
-            for j in xrange(len(sentence.entries)):
-                possible_args_for_pos[pos].add(sentence.entries[j].predicateList[i])
     return (wordsCount, {w: i for i, w in enumerate(wordsCount.keys())},
             {p: i for i, p in enumerate(posCount)}, semRelCount.keys(),
-            {w: i for i, w in enumerate(predicate_lemmas)},possible_args_for_pos,
+            {w: i for i, w in enumerate(predicate_lemmas)},
             {c: i for i, c in enumerate(chars)})
 
 def read_conll(fh):

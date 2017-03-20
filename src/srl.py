@@ -5,7 +5,7 @@ import numpy as np
 from collections import  defaultdict
 
 class SRLLSTM:
-    def __init__(self, words, pos, roles, w2i, pl2i, possible_args, chars, options):
+    def __init__(self, words, pos, roles, w2i, pl2i, chars, options):
         self.model = Model()
         self.batch_size = options.batch
         self.trainer = AdamTrainer(self.model, options.learning_rate)
@@ -26,15 +26,6 @@ class SRLLSTM:
         self.d_prime_l = options.d_prime_l
         self.k = options.k
         self.alpha = options.alpha
-
-        # self.masks = dict()
-        # for p in self.ipos:
-        #     the_mask = [0]*len(self.iroles)
-        #     for r in self.roles.keys():
-        #         if not r in possible_args[p]:
-        #             the_mask[self.roles[r]]= 10. ** 6
-        #     self.masks[p]= the_mask
-
         self.external_embedding = None
         self.x_pe = None
         if options.external_embedding is not None:

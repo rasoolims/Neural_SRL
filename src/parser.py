@@ -44,14 +44,14 @@ if __name__ == '__main__':
     if options.conll_train:
         print 'Preparing vocab'
         print options
-        words,w2i, pos, semRels, pl2i,possible_args_for_pos,chars = utils.vocab(options.conll_train)
+        words,w2i, pos, semRels, pl2i,chars = utils.vocab(options.conll_train)
 
         with open(os.path.join(options.outdir, options.params), 'w') as paramsfp:
-            pickle.dump((words,w2i, pos, semRels, pl2i, possible_args_for_pos,chars,options), paramsfp)
+            pickle.dump((words,w2i, pos, semRels, pl2i, chars,options), paramsfp)
         print 'Finished collecting vocab'
 
         print 'Initializing blstm srl:'
-        parser = SRLLSTM(words, pos, semRels, w2i, pl2i, possible_args_for_pos, chars,options)
+        parser = SRLLSTM(words, pos, semRels, w2i, pl2i, chars,options)
         for epoch in xrange(options.epochs):
             print 'Starting epoch', epoch
             parser.Train(options.conll_train, options.conll_dev, os.path.join(options.outdir, options.model))
@@ -66,9 +66,9 @@ if __name__ == '__main__':
 
     if options.input and options.output:
         with open(options.params, 'r') as paramsfp:
-            words,w2i, pos, semRels, pl2i, possible_args_for_pos,chars, stored_opt = pickle.load(paramsfp)
+            words,w2i, pos, semRels, pl2i, chars, stored_opt = pickle.load(paramsfp)
         stored_opt.external_embedding = options.external_embedding
-        parser = SRLLSTM(words,pos, semRels, w2i, pl2i, possible_args_for_pos,chars,stored_opt)
+        parser = SRLLSTM(words,pos, semRels, w2i, pl2i, chars,stored_opt)
         parser.Load(options.model)
         ts = time.time()
         pred = list(parser.Predict(options.input))
