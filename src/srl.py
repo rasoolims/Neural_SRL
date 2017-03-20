@@ -27,13 +27,13 @@ class SRLLSTM:
         self.k = options.k
         self.alpha = options.alpha
 
-        self.masks = dict()
-        for p in self.ipos:
-            the_mask = [0]*len(self.iroles)
-            for r in self.roles.keys():
-                if not r in possible_args[p]:
-                    the_mask[self.roles[r]]= 10. ** 6
-            self.masks[p]= the_mask
+        # self.masks = dict()
+        # for p in self.ipos:
+        #     the_mask = [0]*len(self.iroles)
+        #     for r in self.roles.keys():
+        #         if not r in possible_args[p]:
+        #             the_mask[self.roles[r]]= 10. ** 6
+        #     self.masks[p]= the_mask
 
         self.external_embedding = None
         self.x_pe = None
@@ -120,7 +120,7 @@ class SRLLSTM:
         U = parameter(self.U)
         for p in xrange(len(sentence.predicates)):
             pred_index = sentence.predicates[p]
-            mask_vec = inputVector(self.masks[sentence.entries[pred_index].pos])
+            #mask_vec = inputVector(self.masks[sentence.entries[pred_index].pos])
             c = float(self.wordsCount.get(sentence.entries[pred_index].norm, 0))
             v_p = bilstms[pred_index]
             word_drop = random.random() < 1.0 - (c / (self.alpha + c))
@@ -132,7 +132,7 @@ class SRLLSTM:
                 gold_role = self.roles[sentence.entries[arg_index].predicateList[p]]
                 v_i = bilstms[arg_index]
                 cand = concatenate([v_i, v_p])
-                scores = W *cand - mask_vec
+                scores = W *cand #- mask_vec
                 sc = scores.npvalue()
                 argmax = np.argmax(sc)
                 if argmax == gold_role:
