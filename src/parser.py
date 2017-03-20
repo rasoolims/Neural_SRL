@@ -30,6 +30,7 @@ if __name__ == '__main__':
     parser.add_option("--mem", type="int", dest="mem", default="2048")
     parser.add_option("--save_epoch", action="store_true", dest="save_epoch", default=False, help='Save each epoch.')
     parser.add_option("--char", action="store_true", dest="use_char_lstm", default=False, help='Use char LSTM.')
+    parser.add_option("--use_all_lemma", action="store_true", dest="use_all_lemma", default=False)
 
     (options, args) = parser.parse_args()
     print 'Using external embedding:', options.external_embedding
@@ -44,14 +45,14 @@ if __name__ == '__main__':
     if options.conll_train:
         print 'Preparing vocab'
         print options
-        words,w2i, pos, semRels, pl2i,possible_args_for_pos,chars = utils.vocab(options.conll_train)
+        words,w2i, pos, semRels, pl2i,possible_args_for_pos,chars,lemmas = utils.vocab(options.conll_train,options.use_all_lemma)
 
         with open(os.path.join(options.outdir, options.params), 'w') as paramsfp:
-            pickle.dump((words,w2i, pos, semRels, pl2i, possible_args_for_pos,chars,options), paramsfp)
+            pickle.dump((words,w2i, pos, semRels, pl2i, possible_args_for_pos,chars,lemmas,options), paramsfp)
         print 'Finished collecting vocab'
 
         print 'Initializing blstm srl:'
-        parser = SRLLSTM(words, pos, semRels, w2i, pl2i, possible_args_for_pos, chars,options)
+        parser = SRLLSTM(words, pos, semRels, w2i, pl2i, possible_args_for_pos, chars,lemmas,options)
         for epoch in xrange(options.epochs):
             print 'Starting epoch', epoch
             parser.Train(options.conll_train, options.conll_dev, os.path.join(options.outdir, options.model))
@@ -66,9 +67,9 @@ if __name__ == '__main__':
 
     if options.input and options.output:
         with open(options.params, 'r') as paramsfp:
-            words,w2i, pos, semRels, pl2i, possible_args_for_pos,chars, stored_opt = pickle.load(paramsfp)
+            words,w2i, pos, semRels, pl2i, possible_args_for_pos,chars, lemmas,stored_opt = pickle.load(paramsfp)
         stored_opt.external_embedding = options.external_embedding
-        parser = SRLLSTM(words,pos, semRels, w2i, pl2i, possible_args_for_pos,chars,stored_opt)
+        parser = SRLLSTM(words,pos, semRels, w2i, pl2i, possible_args_for_pos,chars,lemmas,stored_opt)
         parser.Load(options.model)
         ts = time.time()
         pred = list(parser.Predict(options.input))
