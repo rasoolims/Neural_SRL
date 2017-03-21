@@ -62,11 +62,12 @@ if __name__ == '__main__':
                 if not clusters[w] in seen_clusters:
                     del clusters[w]
 
-            offset = len(w2i)
+            l = len(w2i)
+            offset = l
             for c in set(clusters.values()):
                 w2i[c] = offset
                 offset+=1
-            print 'loaded',len(clusters),'words with',len(set(clusters.values())),'clusters'
+            print 'loaded',len(clusters),'words with',len(set(clusters.values())),'clusters and',l,'in-vocabulary words'
 
         with open(os.path.join(options.outdir, options.params), 'w') as paramsfp:
             pickle.dump((words,w2i, pos, semRels, pl2i, chars,clusters, options), paramsfp)
