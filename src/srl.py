@@ -29,7 +29,6 @@ class SRLLSTM:
         self.alpha = options.alpha
         self.external_embedding = None
         self.x_pe = None
-        self.min_freq = options.min_freq
         if options.external_embedding is not None:
             external_embedding_fp = open(options.external_embedding, 'r')
             external_embedding_fp.readline()
@@ -92,7 +91,7 @@ class SRLLSTM:
             if not self.clusters:
                 x_re.append(lookup(self.x_re, int(self.words.get(token.norm, 0)) if not word_drop else 0))
             else:
-                if c<self.min_freq and token.norm in self.clusters:
+                if not token.norm in self.words and token.norm in self.clusters:
                     x_re.append(lookup(self.x_re,int(self.words.get(self.clusters[token.norm]))))
                 else:
                     x_re.append(lookup(self.x_re, int(self.words.get(token.norm, 0))))
