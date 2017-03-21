@@ -34,7 +34,7 @@ class ConllEntry:
             entry_list.append(p)
         return '\t'.join(entry_list)
 
-def vocab(conll_path):
+def vocab(conll_path, min_freq):
     wordsCount = Counter()
     posCount = Counter()
     semRelCount = Counter()
@@ -54,7 +54,14 @@ def vocab(conll_path):
                 semRelCount.update([pred])
             chars.update([c for c in list(node.form)])
 
-    return (wordsCount, {w: i for i, w in enumerate(wordsCount.keys())},
+    w2i = dict()
+    c = 0
+    for w in wordsCount.keys():
+        if wordsCount[w]>min_freq:
+            w2i[w]=c
+            c+=1
+
+    return (wordsCount, w2i,
             {p: i for i, p in enumerate(posCount)}, semRelCount.keys(),
             {w: i for i, w in enumerate(predicate_lemmas)},
             {c: i for i, c in enumerate(chars)})

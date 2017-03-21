@@ -5,12 +5,13 @@ import numpy as np
 from collections import  defaultdict
 
 class SRLLSTM:
-    def __init__(self, words, pos, roles, w2i, pl2i, chars, options):
+    def __init__(self, words, pos, roles, w2i, pl2i, chars, clusters, options):
         self.model = Model()
         self.batch_size = options.batch
         self.trainer = AdamTrainer(self.model, options.learning_rate)
         self.wordsCount = words
         self.words = {word: ind + 2 for word, ind in w2i.iteritems()}
+        self.clusters = clusters
         self.pred_lemmas = {pl: ind + 2 for pl, ind in pl2i.iteritems()}
         self.pos = {p: ind for ind, p in enumerate(pos)}
         self.ipos = pos
@@ -28,6 +29,7 @@ class SRLLSTM:
         self.alpha = options.alpha
         self.external_embedding = None
         self.x_pe = None
+        self.min_freq = options.min_freq
         if options.external_embedding is not None:
             external_embedding_fp = open(options.external_embedding, 'r')
             external_embedding_fp.readline()
@@ -85,9 +87,16 @@ class SRLLSTM:
         if self.char_lstm_dim==0: char_lstms = [[None] for i in xrange(len(sentence))]
         # first extracting embedding features.
         for token in sentence:
-            c = float(self.wordsCount.get(token.norm, 0))
+            c = int(self.wordsCount.get(token.norm, 0))
             word_drop = train and (random.random() < 1.0 - (c / (self.alpha + c)))
-            x_re.append(lookup(self.x_re, int(self.words.get(token.norm, 0)) if not word_drop else 0))
+            if not self.clusters:
+                x_re.append(lookup(self.x_re, int(self.words.get(token.norm, 0)) if not word_drop else 0))
+            else:
+                if c<self.min_freq and token.norm in self.clusters:
+                    x_re.append(lookup(self.x_re,int(self.words.get(self.clusters[token.norm]))))
+                else:
+                    x_re.append(lookup(self.x_re, int(self.words.get(token.norm, 0))))
+
             # just have lemma embedding for predicates
             x_le.append(lookup(self.x_le, int(self.pred_lemmas.get(token.lemma, 0)) if not word_drop else 0)) if token.is_pred else x_le.append(self.empty_lemma_embed)
             x_pos.append(lookup(self.x_pos, int(self.pos[token.pos])))
