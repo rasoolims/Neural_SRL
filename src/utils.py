@@ -51,7 +51,8 @@ def vocab(conll_path, min_freq):
             if node.is_pred:
                 predicate_lemmas.add(node.lemma)
             for pred in node.predicateList.values():
-                semRelCount.update([pred])
+                if pred!='?':
+                    semRelCount.update([pred])
             chars.update([c for c in list(node.form)])
 
     w2i = dict()

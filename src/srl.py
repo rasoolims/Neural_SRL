@@ -127,6 +127,7 @@ class SRLLSTM:
             u_l = self.u_l[pred_lemma_index]
             W = transpose(concatenate_cols([rectify(U * (concatenate([u_l, self.v_r[role]]))) for role in xrange(len(self.roles))]))
             for arg_index in xrange(len(sentence.entries)):
+                if sentence.entries[arg_index].predicateList[p]=='?': continue
                 gold_role = self.roles[sentence.entries[arg_index].predicateList[p]]
                 v_i = bilstms[arg_index]
                 cand = concatenate([v_i, v_p])
