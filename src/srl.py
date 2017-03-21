@@ -5,11 +5,12 @@ import numpy as np
 from collections import  defaultdict
 
 class SRLLSTM:
-    def __init__(self, words, pos, roles, w2i, pl2i, chars, clusters, options):
+    def __init__(self, words,lemma_count, pos, roles, w2i, pl2i, chars, clusters, options):
         self.model = Model()
         self.batch_size = options.batch
         self.trainer = AdamTrainer(self.model, options.learning_rate)
         self.wordsCount = words
+        self.lemma_count = lemma_count
         self.words = {word: ind + 2 for word, ind in w2i.iteritems()}
         self.clusters = clusters
         self.pred_lemmas = {pl: ind + 2 for pl, ind in pl2i.iteritems()}
@@ -88,7 +89,9 @@ class SRLLSTM:
         # first extracting embedding features.
         for token in sentence:
             c = int(self.wordsCount.get(token.norm, 0))
+            cl = int(self.lemma_count.get(token.lemma, 0))
             word_drop = train and (random.random() < 1.0 - (c / (self.alpha + c)))
+            lemma_drop = train and (random.random() < 1.0 - (cl / (self.alpha + cl)))
             if not self.clusters:
                 x_re.append(lookup(self.x_re, int(self.words.get(token.norm, 0)) if not word_drop else 0))
             else:
@@ -98,7 +101,7 @@ class SRLLSTM:
                     x_re.append(lookup(self.x_re, int(self.words.get(token.norm, 0))))
 
             # just have lemma embedding for predicates
-            x_le.append(lookup(self.x_le, int(self.pred_lemmas.get(token.lemma, 0)) if not word_drop else 0)) if token.is_pred else x_le.append(self.empty_lemma_embed)
+            x_le.append(lookup(self.x_le, int(self.pred_lemmas.get(token.lemma, 0)) if not lemma_drop else 0)) if token.is_pred else x_le.append(self.empty_lemma_embed)
             x_pos.append(lookup(self.x_pos, int(self.pos[token.pos])))
             pred_bool.append(inputVector([1])) if token.is_pred else pred_bool.append(inputVector([0]))
             if self.external_embedding is not None:
@@ -119,10 +122,11 @@ class SRLLSTM:
         U = parameter(self.U)
         for p in xrange(len(sentence.predicates)):
             pred_index = sentence.predicates[p]
-            c = float(self.wordsCount.get(sentence.entries[pred_index].norm, 0))
+            cl = float(self.lemma_count.get(sentence.entries[pred_index].lemma, 0))
             v_p = bilstms[pred_index]
-            word_drop = random.random() < 1.0 - (c / (self.alpha + c))
-            pred_lemma_index = 0 if word_drop or sentence.entries[pred_index].lemma not in self.pred_lemmas \
+            lemma_drop = random.random() < 1.0 - (cl / (self.alpha + cl))
+
+            pred_lemma_index = 0 if lemma_drop or sentence.entries[pred_index].lemma not in self.pred_lemmas \
                 else self.pred_lemmas[sentence.entries[pred_index].lemma]
             W = transpose(concatenate_cols([rectify(U * (concatenate([self.u_l[pred_lemma_index], self.v_r[role]]))) for role in xrange(len(self.roles))]))
             for arg_index in xrange(len(sentence.entries)):
