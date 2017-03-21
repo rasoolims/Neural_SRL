@@ -84,6 +84,7 @@ class SRLLSTM:
                     char_lstms.append(self.char_lstms.transduce(
                         [self.x_char[self.chars[c]] if c in self.chars else self.x_char[self.chars[' ']] for c in word_chars]))
         if self.char_lstm_dim==0: char_lstms = [[None] for i in xrange(len(sentence))]
+
         # first extracting embedding features.
         for token in sentence:
             c = int(self.wordsCount.get(token.norm, 0))
@@ -109,8 +110,7 @@ class SRLLSTM:
                     x_pe.append(self.x_pe[0])
             else:
                 x_pe.append(None)
-        seq_input = [concatenate(filter(None, [x_re[i], x_pe[i], x_pos[i], x_le[i], pred_bool[i],char_lstms[i][-1]])) for i in
-                     xrange(len(x_re))]
+        seq_input = [concatenate(filter(None, [x_re[i], x_pe[i], x_pos[i], x_le[i], pred_bool[i],char_lstms[i][-1]])) for i in xrange(len(x_re))]
         return self.deep_lstms.transduce(seq_input)
 
     def buildGraph(self, sentence, correct):
@@ -124,19 +124,15 @@ class SRLLSTM:
             word_drop = random.random() < 1.0 - (c / (self.alpha + c))
             pred_lemma_index = 0 if word_drop or sentence.entries[pred_index].lemma not in self.pred_lemmas \
                 else self.pred_lemmas[sentence.entries[pred_index].lemma]
-            u_l = self.u_l[pred_lemma_index]
-            W = transpose(concatenate_cols([rectify(U * (concatenate([u_l, self.v_r[role]]))) for role in xrange(len(self.roles))]))
+            W = transpose(concatenate_cols([rectify(U * (concatenate([self.u_l[pred_lemma_index], self.v_r[role]]))) for role in xrange(len(self.roles))]))
             for arg_index in xrange(len(sentence.entries)):
                 if sentence.entries[arg_index].predicateList[p]=='?': continue
                 gold_role = self.roles[sentence.entries[arg_index].predicateList[p]]
                 v_i = bilstms[arg_index]
-                cand = concatenate([v_i, v_p])
-                scores = W *cand
-                sc = scores.npvalue()
-                argmax = np.argmax(sc)
-                if argmax == gold_role:
+                scores = W *concatenate([v_i, v_p])
+                if np.argmax(scores.npvalue()) == gold_role:
                     correct+=1
-                err =  pickneglogsoftmax(scores, gold_role)
+                err = pickneglogsoftmax(scores, gold_role)
                 errs.append(err)
         return errs,correct
 
@@ -148,12 +144,10 @@ class SRLLSTM:
             pred_lemma_index = 0 if sentence.entries[pred_index].lemma not in self.pred_lemmas \
                 else self.pred_lemmas[sentence.entries[pred_index].lemma]
             v_p = bilstms[pred_index]
-            u_l = self.u_l[pred_lemma_index]
-            W = transpose(concatenate_cols([rectify(U * (concatenate([u_l, self.v_r[role]]))) for role in xrange(len(self.roles))]))
+            W = transpose(concatenate_cols([rectify(U * (concatenate([self.u_l[pred_lemma_index], self.v_r[role]]))) for role in xrange(len(self.roles))]))
             for arg_index in xrange(len(sentence.entries)):
                 v_i = bilstms[arg_index]
-                cand = concatenate([v_i, v_p])
-                scores = W * cand
+                scores = W * concatenate([v_i, v_p])
                 sentence.entries[arg_index].predicateList[p] = self.iroles[np.argmax(scores.npvalue())]
 
     def Train(self, conll_path):
