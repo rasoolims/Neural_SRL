@@ -67,7 +67,7 @@ if __name__ == '__main__':
             for c in set(clusters.values()):
                 w2i[c] = offset
                 offset+=1
-            print 'loaded',len(clusters),'words with',len(set(clusters.values())),'clusters and',l,'in-vocabulary words'
+            print 'loaded',len(clusters),'words with',len(set(clusters.values())),'clusters and',l,'in-vocabulary words out of',len(words)
 
         with open(os.path.join(options.outdir, options.params), 'w') as paramsfp:
             pickle.dump((words,w2i, pos, semRels, pl2i, chars,clusters, options), paramsfp)
