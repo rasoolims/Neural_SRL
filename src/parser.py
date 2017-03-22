@@ -46,7 +46,7 @@ if __name__ == '__main__':
     if options.conll_train:
         print 'Preparing vocab'
         print options
-        words,lemma_count,w2i, pos, semRels, pl2i,chars = utils.vocab(options.conll_train, 0 if options.cluster_file==None else options.min_freq)
+        words,w2i, pos, semRels, pl2i,chars = utils.vocab(options.conll_train, 0 if options.cluster_file==None else options.min_freq)
         clusters = None
         if options.cluster_file != None:
             clusters = dict()
@@ -70,11 +70,11 @@ if __name__ == '__main__':
             print 'loaded',len(clusters),'words with',len(set(clusters.values())),'clusters and',l,'in-vocabulary words out of',len(words)
 
         with open(os.path.join(options.outdir, options.params), 'w') as paramsfp:
-            pickle.dump((words,lemma_count,w2i, pos, semRels, pl2i, chars,clusters, options), paramsfp)
+            pickle.dump((words,w2i, pos, semRels, pl2i, chars,clusters, options), paramsfp)
         print 'Finished collecting vocab'
 
         print 'Initializing blstm srl:'
-        parser = SRLLSTM(words, lemma_count, pos, semRels, w2i, pl2i, chars,clusters, options)
+        parser = SRLLSTM(words, pos, semRels, w2i, pl2i, chars,clusters, options)
         for epoch in xrange(options.epochs):
             print 'Starting epoch', epoch
             parser.Train(options.conll_train)
@@ -89,7 +89,7 @@ if __name__ == '__main__':
 
     if options.input and options.output:
         with open(options.params, 'r') as paramsfp:
-            words,lemma_count,w2i, pos, semRels, pl2i, chars, clusters,stored_opt = pickle.load(paramsfp)
+            words,w2i, pos, semRels, pl2i, chars, clusters,stored_opt = pickle.load(paramsfp)
         stored_opt.external_embedding = options.external_embedding
         parser = SRLLSTM(words,pos, semRels, w2i, pl2i, chars,clusters,stored_opt)
         parser.Load(options.model)

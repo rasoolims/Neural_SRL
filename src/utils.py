@@ -38,7 +38,7 @@ def vocab(conll_path, min_freq):
     wordsCount = Counter()
     posCount = Counter()
     semRelCount = Counter()
-    lemma_count = Counter()
+    predicate_lemmas = set()
     chars = Counter()
     chars.update([' ', '<s>', '</s>'])
 
@@ -49,7 +49,7 @@ def vocab(conll_path, min_freq):
             if node.predicateList == None:
                 continue
             if node.is_pred:
-                lemma_count.update([node.lemma])
+                predicate_lemmas.add(node.lemma)
             for pred in node.predicateList.values():
                 if pred!='?':
                     semRelCount.update([pred])
@@ -62,9 +62,9 @@ def vocab(conll_path, min_freq):
             w2i[w]=c
             c+=1
 
-    return (wordsCount, lemma_count, w2i,
+    return (wordsCount, w2i,
             {p: i for i, p in enumerate(posCount)}, semRelCount.keys(),
-            {w: i for i, w in enumerate(lemma_count)},
+            {w: i for i, w in enumerate(predicate_lemmas)},
             {c: i for i, c in enumerate(chars)})
 
 def read_conll(fh):
