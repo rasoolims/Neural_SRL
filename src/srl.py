@@ -29,6 +29,7 @@ class SRLLSTM:
         self.alpha = options.alpha
         self.external_embedding = None
         self.x_pe = None
+        self.drop = options.drop
         if options.external_embedding is not None:
             external_embedding_fp = open(options.external_embedding, 'r')
             external_embedding_fp.readline()
@@ -110,7 +111,13 @@ class SRLLSTM:
                     x_pe.append(self.x_pe[0])
             else:
                 x_pe.append(None)
-        seq_input = [concatenate(filter(None, [x_re[i], x_pe[i], x_pos[i], x_le[i], pred_bool[i],char_lstms[i][-1]])) for i in xrange(len(x_re))]
+        if train and self.drop:
+            seq_input = [
+                concatenate(filter(None, [dropout(x_re[i],0.33), x_pe[i], dropout(x_pos[i],0.33), dropout(x_le[i],0.33), pred_bool[i], char_lstms[i][-1]])) for i
+                in xrange(len(x_re))]
+        else:
+            seq_input = [concatenate(filter(None, [x_re[i], x_pe[i], x_pos[i], x_le[i], pred_bool[i],char_lstms[i][-1]])) for i in xrange(len(x_re))]
+        if self.drop: self.deep_lstms.set_dropout(0.33)
         return self.deep_lstms.transduce(seq_input)
 
     def buildGraph(self, sentence, correct):
@@ -172,6 +179,7 @@ class SRLLSTM:
         self.trainer.update_epoch()
 
     def Predict(self, conll_path):
+        self.deep_lstms.disable_dropout()
         for iSentence, sentence in enumerate(read_conll(conll_path)):
             self.decode(sentence)
             renew_cg()

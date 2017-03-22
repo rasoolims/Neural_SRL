@@ -30,6 +30,7 @@ if __name__ == '__main__':
     parser.add_option("--outdir", type="string", dest="outdir", default="results")
     parser.add_option("--mem", type="int", dest="mem", default="2048")
     parser.add_option("--save_epoch", action="store_true", dest="save_epoch", default=False, help='Save each epoch.')
+    parser.add_option("--drop", action="store_true", dest="drop", default=False, help='Use dropout.')
     parser.add_option("--char", action="store_true", dest="use_char_lstm", default=False, help='Use char LSTM.')
     parser.add_option("--cluster", dest="cluster_file", help="Use Brown cluster embeddings for rare words.", metavar="FILE", default=None)
     parser.add_option("--min_freq", type="int", dest="min_freq", help="Max frequency for replacing with clusters", default="5")
