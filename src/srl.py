@@ -31,6 +31,7 @@ class SRLLSTM:
         self.external_embedding = None
         self.x_pe = None
         self.drop = options.drop
+        self.region = options.region
         if options.external_embedding is not None:
             external_embedding_fp = open(options.external_embedding, 'r')
             external_embedding_fp.readline()
@@ -52,7 +53,7 @@ class SRLLSTM:
         self.char_lstm_dim = (options.d_lstm_char if options.use_char_lstm else 0)
         self.d_char = 0 if self.char_lstm_dim==0 else options.d_char
         self.inp_dim = self.d_w + self.d_l + self.d_pos + self.char_lstm_dim \
-                       + (self.edim if self.external_embedding is not None else 0) + 1  # 1 for predicate indicator
+                       + (self.edim if self.external_embedding is not None else 0) + (1 if self.region else 0)  # 1 for predicate indicator
 
         self.deep_lstms = BiRNNBuilder(self.k, self.inp_dim, 2*self.d_h, self.model, LSTMBuilder)
         self.char_lstms = None if self.char_lstm_dim==0 else BiRNNBuilder(1, options.d_char, self.char_lstm_dim, self.model, LSTMBuilder)
@@ -104,7 +105,10 @@ class SRLLSTM:
             # just have lemma embedding for predicates
             x_le.append(lookup(self.x_le, int(self.pred_lemmas.get(token.lemma, 0)) if not lemma_drop else 0)) if token.is_pred else x_le.append(self.empty_lemma_embed)
             x_pos.append(lookup(self.x_pos, int(self.pos[token.pos])))
-            pred_bool.append(inputVector([1])) if token.is_pred else pred_bool.append(inputVector([0]))
+            if self.region:
+                pred_bool.append(inputVector([1])) if token.is_pred else pred_bool.append(inputVector([0]))
+            else:
+                pred_bool.append(None)
             if self.external_embedding is not None:
                 if token.form in self.external_embedding:
                     x_pe.append(self.x_pe[self.x_pe_dict[token.form]])
