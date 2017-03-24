@@ -16,8 +16,6 @@ if __name__ == '__main__':
     parser.add_option("--d_w", type="int", dest="d_w", default=100)
     parser.add_option("--d_l", type="int", dest="d_l", default=100)
     parser.add_option("--d_pos", type="int", dest="d_pos", default=16)
-    parser.add_option("--d_char", type="int", dest="d_char", default=30)
-    parser.add_option("--d_lstm_char", type="int", dest="d_lstm_char", default=100)
     parser.add_option("--d_h", type="int", dest="d_h", default=512)
     parser.add_option("--d_r", type="int", dest="d_r", default=128)
     parser.add_option("--d_prime_l", type="int", dest="d_prime_l", default=128)
@@ -32,7 +30,6 @@ if __name__ == '__main__':
     parser.add_option("--save_epoch", action="store_true", dest="save_epoch", default=False, help='Save each epoch.')
     parser.add_option("--drop", action="store_true", dest="drop", default=False, help='Use dropout.')
     parser.add_option("--region", action="store_false", dest="region", default=True, help='Use predicate boolean flag.')
-    parser.add_option("--char", action="store_true", dest="use_char_lstm", default=False, help='Use char LSTM.')
 
     (options, args) = parser.parse_args()
     print 'Using external embedding:', options.external_embedding
@@ -47,13 +44,13 @@ if __name__ == '__main__':
     if options.conll_train:
         print 'Preparing vocab'
         print options
-        words, lemma_count,w2i, pos, semRels, pl2i,chars = utils.vocab(options.conll_train)
+        words, lemma_count,w2i, pos, semRels, pl2i = utils.vocab(options.conll_train)
         with open(os.path.join(options.outdir, options.params), 'w') as paramsfp:
-            pickle.dump((words,lemma_count,w2i, pos, semRels, pl2i, chars, options), paramsfp)
+            pickle.dump((words,lemma_count,w2i, pos, semRels, pl2i, options), paramsfp)
         print 'Finished collecting vocab'
 
         print 'Initializing blstm srl:'
-        parser = SRLLSTM(words,lemma_count, pos, semRels, w2i, pl2i, chars,options)
+        parser = SRLLSTM(words,lemma_count, pos, semRels, w2i, pl2i, options)
         for epoch in xrange(options.epochs):
             print 'Starting epoch', epoch
             parser.Train(options.conll_train)
@@ -68,9 +65,9 @@ if __name__ == '__main__':
 
     if options.input and options.output:
         with open(options.params, 'r') as paramsfp:
-            words,lemma_count,w2i, pos, semRels, pl2i, chars, stored_opt = pickle.load(paramsfp)
+            words,lemma_count,w2i, pos, semRels, pl2i, stored_opt = pickle.load(paramsfp)
         stored_opt.external_embedding = options.external_embedding
-        parser = SRLLSTM(words,lemma_count,pos, semRels, w2i, pl2i, chars,stored_opt)
+        parser = SRLLSTM(words,lemma_count,pos, semRels, w2i, pl2i, stored_opt)
         parser.Load(options.model)
         ts = time.time()
         pred = list(parser.Predict(options.input))

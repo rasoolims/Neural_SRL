@@ -5,7 +5,7 @@ import numpy as np
 from collections import  defaultdict
 
 class SRLLSTM:
-    def __init__(self, words, lemmas, pos, roles, w2i, pl2i, chars, options):
+    def __init__(self, words, lemmas, pos, roles, w2i, pl2i, options):
         self.model = Model()
         self.batch_size = options.batch
         self.trainer = AdamTrainer(self.model, options.learning_rate, 0.9, options.beta2)
@@ -16,8 +16,6 @@ class SRLLSTM:
         self.pred_lemmas = {pl: ind + 2 for pl, ind in pl2i.iteritems()}
         self.pos = {p: ind for ind, p in enumerate(pos)}
         self.ipos = pos
-        self.chars = {c: ind for ind, c in enumerate(chars)}
-        self.ichar = chars
         self.roles = {r: ind for ind, r in enumerate(roles)}
         self.iroles = roles
         self.d_w = options.d_w
@@ -50,14 +48,9 @@ class SRLLSTM:
             self.x_pe.set_updated(False)
             print 'Load external embedding. Vector dimensions', self.edim
 
-        self.char_lstm_dim = (options.d_lstm_char if options.use_char_lstm else 0)
-        self.d_char = 0 if self.char_lstm_dim==0 else options.d_char
-        self.inp_dim = self.d_w + self.d_l + self.d_pos + self.char_lstm_dim \
-                       + (self.edim if self.external_embedding is not None else 0) + (1 if self.region else 0)  # 1 for predicate indicator
+        self.inp_dim = self.d_w + self.d_l + self.d_pos + (self.edim if self.external_embedding is not None else 0) + (1 if self.region else 0)  # 1 for predicate indicator
 
         self.deep_lstms = BiRNNBuilder(self.k, self.inp_dim, 2*self.d_h, self.model, LSTMBuilder)
-        self.char_lstms = None if self.char_lstm_dim==0 else BiRNNBuilder(1, options.d_char, self.char_lstm_dim, self.model, LSTMBuilder)
-        self.x_char = None if self.char_lstm_dim==0 else  self.model.add_lookup_parameters((len(self.chars) , self.d_char))
         self.x_re = self.model.add_lookup_parameters((len(self.words) + 2, self.d_w))
         self.x_le = self.model.add_lookup_parameters((len(self.pred_lemmas) + 2, self.d_l))
         self.x_pos = self.model.add_lookup_parameters((len(pos), self.d_pos))
@@ -75,18 +68,6 @@ class SRLLSTM:
     def getBilstmFeatures(self, sentence, train):
         x_re, x_pe, x_pos, x_le, pred_bool = [], [], [], [], []
         self.empty_lemma_embed = inputVector([0] * self.d_l)
-
-        char_lstms = []
-        if self.char_lstm_dim > 0:
-            for ent in sentence:
-                word_chars = ['<s>'] + list(ent.form) + ['</s>']
-                if train:
-                    char_lstms.append(self.char_lstms.transduce(
-                        [self.x_char[self.chars[c]] if random.random() >= 0.001 else self.x_char[self.chars[' ']] for c in word_chars]))
-                else:
-                    char_lstms.append(self.char_lstms.transduce(
-                        [self.x_char[self.chars[c]] if c in self.chars else self.x_char[self.chars[' ']] for c in word_chars]))
-        if self.char_lstm_dim==0: char_lstms = [[None] for i in xrange(len(sentence))]
 
         # first extracting embedding features.
         for token in sentence:
@@ -114,10 +95,10 @@ class SRLLSTM:
                 x_pe.append(None)
         if train and self.drop:
             seq_input = [
-                concatenate(filter(None, [dropout(x_re[i],0.33), x_pe[i], dropout(x_pos[i],0.33), dropout(x_le[i],0.33), pred_bool[i], char_lstms[i][-1]])) for i
+                concatenate(filter(None, [dropout(x_re[i],0.33), x_pe[i], dropout(x_pos[i],0.33), dropout(x_le[i],0.33), pred_bool[i]])) for i
                 in xrange(len(x_re))]
         else:
-            seq_input = [concatenate(filter(None, [x_re[i], x_pe[i], x_pos[i], x_le[i], pred_bool[i],char_lstms[i][-1]])) for i in xrange(len(x_re))]
+            seq_input = [concatenate(filter(None, [x_re[i], x_pe[i], x_pos[i], x_le[i], pred_bool[i]])) for i in xrange(len(x_re))]
         if self.drop: self.deep_lstms.set_dropout(0.33)
         return self.deep_lstms.transduce(seq_input)
 

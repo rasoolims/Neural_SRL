@@ -39,8 +39,6 @@ def vocab(conll_path):
     posCount = Counter()
     semRelCount = Counter()
     lemma_count = Counter()
-    chars = Counter()
-    chars.update([' ', '<s>', '</s>'])
 
     for sentence in read_conll(conll_path):
         wordsCount.update([node.norm for node in sentence.entries])
@@ -53,11 +51,9 @@ def vocab(conll_path):
             for pred in node.predicateList.values():
                 if pred!='?':
                     semRelCount.update([pred])
-            chars.update([c for c in list(node.form)])
     return (wordsCount, lemma_count, {w: i for i, w in enumerate(wordsCount)},
             {p: i for i, p in enumerate(posCount)}, semRelCount.keys(),
-            {l: i for i, l in enumerate(lemma_count)},
-            {c: i for i, c in enumerate(chars)})
+            {l: i for i, l in enumerate(lemma_count)})
 
 def read_conll(fh):
     sentences = codecs.open(fh, 'r').read().strip().split('\n\n')
