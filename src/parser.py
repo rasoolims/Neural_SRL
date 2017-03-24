@@ -33,8 +33,6 @@ if __name__ == '__main__':
     parser.add_option("--drop", action="store_true", dest="drop", default=False, help='Use dropout.')
     parser.add_option("--region", action="store_false", dest="region", default=True, help='Use predicate boolean flag.')
     parser.add_option("--char", action="store_true", dest="use_char_lstm", default=False, help='Use char LSTM.')
-    parser.add_option("--cluster", dest="cluster_file", help="Use Brown cluster embeddings for rare words.", metavar="FILE", default=None)
-    parser.add_option("--min_freq", type="int", dest="min_freq", help="Max frequency for replacing with clusters", default="5")
 
     (options, args) = parser.parse_args()
     print 'Using external embedding:', options.external_embedding
@@ -49,35 +47,13 @@ if __name__ == '__main__':
     if options.conll_train:
         print 'Preparing vocab'
         print options
-        words, lemma_count,w2i, pos, semRels, pl2i,chars = utils.vocab(options.conll_train, 0 if options.cluster_file==None else options.min_freq)
-        clusters = None
-        if options.cluster_file != None:
-            clusters = dict()
-            for f in open(options.cluster_file, 'r'):
-                clusters[f.strip().split()[1]] = 'c:'+f.strip().split()[0]
-
-            seen_clusters = set()
-            for w in w2i.keys():
-                if w in clusters:
-                    seen_clusters.add(clusters[w])
-
-            for w in clusters.keys():
-                if not clusters[w] in seen_clusters:
-                    del clusters[w]
-
-            l = len(w2i)
-            offset = l
-            for c in set(clusters.values()):
-                w2i[c] = offset
-                offset+=1
-            print 'loaded',len(clusters),'words with',len(set(clusters.values())),'clusters and',l,'in-vocabulary words out of',len(words)
-
+        words, lemma_count,w2i, pos, semRels, pl2i,chars = utils.vocab(options.conll_train)
         with open(os.path.join(options.outdir, options.params), 'w') as paramsfp:
-            pickle.dump((words,lemma_count,w2i, pos, semRels, pl2i, chars,clusters, options), paramsfp)
+            pickle.dump((words,lemma_count,w2i, pos, semRels, pl2i, chars, options), paramsfp)
         print 'Finished collecting vocab'
 
         print 'Initializing blstm srl:'
-        parser = SRLLSTM(words,lemma_count, pos, semRels, w2i, pl2i, chars,clusters, options)
+        parser = SRLLSTM(words,lemma_count, pos, semRels, w2i, pl2i, chars,options)
         for epoch in xrange(options.epochs):
             print 'Starting epoch', epoch
             parser.Train(options.conll_train)
@@ -92,9 +68,9 @@ if __name__ == '__main__':
 
     if options.input and options.output:
         with open(options.params, 'r') as paramsfp:
-            words,lemma_count,w2i, pos, semRels, pl2i, chars, clusters,stored_opt = pickle.load(paramsfp)
+            words,lemma_count,w2i, pos, semRels, pl2i, chars, stored_opt = pickle.load(paramsfp)
         stored_opt.external_embedding = options.external_embedding
-        parser = SRLLSTM(words,lemma_count,pos, semRels, w2i, pl2i, chars,clusters,stored_opt)
+        parser = SRLLSTM(words,lemma_count,pos, semRels, w2i, pl2i, chars,stored_opt)
         parser.Load(options.model)
         ts = time.time()
         pred = list(parser.Predict(options.input))

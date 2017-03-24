@@ -5,14 +5,13 @@ import numpy as np
 from collections import  defaultdict
 
 class SRLLSTM:
-    def __init__(self, words, lemmas, pos, roles, w2i, pl2i, chars, clusters, options):
+    def __init__(self, words, lemmas, pos, roles, w2i, pl2i, chars, options):
         self.model = Model()
         self.batch_size = options.batch
         self.trainer = AdamTrainer(self.model, options.learning_rate, 0.9, options.beta2)
         self.trainer.set_clip_threshold(1.0)
         self.wordsCount = words
         self.words = {word: ind + 2 for word, ind in w2i.iteritems()}
-        self.clusters = clusters
         self.lemmaCount = lemmas
         self.pred_lemmas = {pl: ind + 2 for pl, ind in pl2i.iteritems()}
         self.pos = {p: ind for ind, p in enumerate(pos)}
@@ -95,13 +94,7 @@ class SRLLSTM:
             cl = int(self.lemmaCount.get(token.lemma, 0))
             word_drop = train and (random.random() < 1.0 - (c / (self.alpha + c)))
             lemma_drop = train and (random.random() < 1.0 - (cl / (self.alpha + cl)))
-            if not self.clusters:
-                x_re.append(lookup(self.x_re, int(self.words.get(token.norm, 0)) if not word_drop else 0))
-            else:
-                if not token.norm in self.words and token.norm in self.clusters:
-                    x_re.append(lookup(self.x_re,int(self.words.get(self.clusters[token.norm]))))
-                else:
-                    x_re.append(lookup(self.x_re, int(self.words.get(token.norm, 0))))
+            x_re.append(lookup(self.x_re, int(self.words.get(token.norm, 0)) if not word_drop else 0))
 
             # just have lemma embedding for predicates
             x_le.append(lookup(self.x_le, int(self.pred_lemmas.get(token.lemma, 0)) if not lemma_drop else 0)) if token.is_pred else x_le.append(self.empty_lemma_embed)
