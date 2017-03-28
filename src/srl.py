@@ -33,10 +33,8 @@ class SRLLSTM:
         if options.external_embedding is not None:
             external_embedding_fp = open(options.external_embedding, 'r')
             external_embedding_fp.readline()
-            self.external_embedding = {line.split(' ')[0]: [float(f) for f in line.strip().split(' ')[1:]] for line in
-                                       external_embedding_fp}
+            self.external_embedding = {line.split(' ')[0]: [float(f) for f in line.strip().split(' ')[1:]] for line in external_embedding_fp}
             external_embedding_fp.close()
-
             self.edim = len(self.external_embedding.values()[0])
             self.noextrn = [0.0 for _ in xrange(self.edim)]
             self.x_pe_dict = {word: i + 2 for i, word in enumerate(self.external_embedding)}
@@ -49,7 +47,6 @@ class SRLLSTM:
             print 'Load external embedding. Vector dimensions', self.edim
 
         self.inp_dim = self.d_w + self.d_l + self.d_pos + (self.edim if self.external_embedding is not None else 0) + (1 if self.region else 0)  # 1 for predicate indicator
-
         self.deep_lstms = BiRNNBuilder(self.k, self.inp_dim, 2*self.d_h, self.model, LSTMBuilder)
         self.x_re = self.model.add_lookup_parameters((len(self.words) + 2, self.d_w))
         self.x_le = self.model.add_lookup_parameters((len(self.pred_lemmas) + 2, self.d_l))
@@ -94,9 +91,7 @@ class SRLLSTM:
             else:
                 x_pe.append(None)
         if train and self.drop:
-            seq_input = [
-                concatenate(filter(None, [dropout(x_re[i],0.33), x_pe[i], dropout(x_pos[i],0.33), dropout(x_le[i],0.33), pred_bool[i]])) for i
-                in xrange(len(x_re))]
+            seq_input = [concatenate(filter(None, [dropout(x_re[i],0.33), x_pe[i], dropout(x_pos[i],0.33), dropout(x_le[i],0.33), pred_bool[i]])) for i in xrange(len(x_re))]
         else:
             seq_input = [concatenate(filter(None, [x_re[i], x_pe[i], x_pos[i], x_le[i], pred_bool[i]])) for i in xrange(len(x_re))]
         if self.drop: self.deep_lstms.set_dropout(0.33)
@@ -111,8 +106,7 @@ class SRLLSTM:
             cl = float(self.lemmaCount.get(sentence.entries[pred_index].lemma, 0))
             v_p = bilstms[pred_index]
             lemma_drop = random.random() < 1.0 - (cl / (self.alpha + cl))
-            pred_lemma_index = 0 if lemma_drop or sentence.entries[pred_index].lemma not in self.pred_lemmas \
-                else self.pred_lemmas[sentence.entries[pred_index].lemma]
+            pred_lemma_index = 0 if lemma_drop or sentence.entries[pred_index].lemma not in self.pred_lemmas else self.pred_lemmas[sentence.entries[pred_index].lemma]
             u_l = self.u_l[pred_lemma_index]
             if self.drop: u_l = dropout(u_l,0.33)
             W = transpose(concatenate_cols([rectify(U * (concatenate([u_l, self.v_r[role] if not self.drop else dropout(self.v_r[role], 0.33)]))) for role in xrange(len(self.roles))]))
@@ -132,8 +126,7 @@ class SRLLSTM:
         U = parameter(self.U)
         for p in xrange(len(sentence.predicates)):
             pred_index = sentence.predicates[p]
-            pred_lemma_index = 0 if sentence.entries[pred_index].lemma not in self.pred_lemmas \
-                else self.pred_lemmas[sentence.entries[pred_index].lemma]
+            pred_lemma_index = 0 if sentence.entries[pred_index].lemma not in self.pred_lemmas else self.pred_lemmas[sentence.entries[pred_index].lemma]
             v_p = bilstms[pred_index]
             W = transpose(concatenate_cols([rectify(U * (concatenate([self.u_l[pred_lemma_index], self.v_r[role]]))) for role in xrange(len(self.roles))]))
             for arg_index in xrange(len(sentence.entries)):
