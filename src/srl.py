@@ -47,7 +47,7 @@ class SRLLSTM:
             print 'Load external embedding. Vector dimensions', self.edim
 
         self.inp_dim = self.d_w + self.d_l + self.d_pos + (self.edim if self.external_embedding is not None else 0) + (1 if self.region else 0)  # 1 for predicate indicator
-        self.deep_lstms = BiRNNBuilder(self.k, self.inp_dim, 2*self.d_h, self.model, LSTMBuilder)
+        self.deep_lstms = BiRNNBuilder(self.k, self.inp_dim, 2*self.d_h, self.model, VanillaLSTMBuilder)
         self.x_re = self.model.add_lookup_parameters((len(self.words) + 2, self.d_w))
         self.x_le = self.model.add_lookup_parameters((len(self.pred_lemmas) + 2, self.d_l))
         self.x_pos = self.model.add_lookup_parameters((len(pos), self.d_pos))
