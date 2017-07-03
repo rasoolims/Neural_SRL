@@ -23,6 +23,8 @@ if __name__ == '__main__':
     parser.add_option("--batch", type="int", dest="batch", default=10)
     parser.add_option("--alpha", type="float", dest="alpha", default=0.25)
     parser.add_option("--beta2", type="float", dest="beta2", default=0.999)
+    parser.add_option("--beta1", type="float", dest="beta1", default=0.9)
+    parser.add_option("--eps", type="float", dest="eps", default=0.00000001)
     parser.add_option("--learning_rate", type="float", dest="learning_rate", default=0.001)
     parser.add_option("--epochs", type="int", dest="epochs", default=30)
     parser.add_option("--outdir", type="string", dest="outdir", default="results")
