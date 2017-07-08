@@ -144,12 +144,12 @@ class SRLLSTM:
             errs+= e
             sen_num+=1
             if sen_num>=self.batch_size and len(errs)>0:
-                sum_errs = esum(errs)
+                sum_errs = esum(errs)/len(errs)
                 loss += sum_errs.scalar_value()
                 sum_errs.backward()
                 self.trainer.update()
                 renew_cg()
-                print 'loss:', loss/ len(errs), 'time:', time.time() - start, 'sen#',(iSentence+1), 'instances',len(errs), 'correct', round(100*float(corrects)/len(errs),2)
+                print 'loss:', loss, 'time:', time.time() - start, 'sen#',(iSentence+1), 'instances',len(errs), 'correct', round(100*float(corrects)/len(errs),2)
                 errs, loss, corrects, sen_num = [], 0, 0, 0
                 iters+=1
                 start = time.time()
