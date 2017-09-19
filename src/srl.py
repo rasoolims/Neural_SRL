@@ -93,7 +93,7 @@ class SRLLSTM:
         seq_input = [concatenate(filter(None, [embed[i], x_le[i], pred_bool[i]])) for i in xrange(len(embed))]
         return self.deep_lstms.transduce(seq_input)
 
-    def buildGraph(self, sentence, correct):
+    def buildGraph(self, sentence):
         errs = []
         embeds = self.getEmbeddings(sentence.entries, True)
         U = parameter(self.U)
@@ -111,11 +111,9 @@ class SRLLSTM:
                 gold_role = self.roles[sentence.entries[arg_index].predicateList[p]]
                 v_i = bilstms[arg_index]
                 scores = W *concatenate([v_i, v_p])
-                if np.argmax(scores.npvalue()) == gold_role:
-                    correct+=1
                 err = pickneglogsoftmax(scores, gold_role)
                 errs.append(err)
-        return errs,correct
+        return errs
 
     def decode(self, sentence):
         embeds = self.getEmbeddings(sentence.entries, False)
@@ -135,9 +133,9 @@ class SRLLSTM:
         start = time.time()
         shuffledData = list(read_conll(conll_path))
         random.shuffle(shuffledData)
-        errs,loss,corrects,iters,sen_num = [],0,0,0,0
+        errs,loss,iters,sen_num = [],0,0,0
         for iSentence, sentence in enumerate(shuffledData):
-            e, corrects = self.buildGraph(sentence, corrects)
+            e = self.buildGraph(sentence)
             errs+= e
             sen_num+=1
             if sen_num>=self.batch_size and len(errs)>0:
@@ -146,8 +144,8 @@ class SRLLSTM:
                 sum_errs.backward()
                 self.trainer.update()
                 renew_cg()
-                print 'loss:', loss, 'time:', time.time() - start, 'sen#',(iSentence+1), 'instances',len(errs), 'correct', round(100*float(corrects)/len(errs),2)
-                errs, loss, corrects, sen_num = [], 0, 0, 0
+                print 'loss:', loss, 'time:', time.time() - start, 'sen#',(iSentence+1), 'instances',len(errs)
+                errs, loss, sen_num = [], 0, 0
                 iters+=1
                 start = time.time()
         self.trainer.update_epoch()
