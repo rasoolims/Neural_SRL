@@ -31,7 +31,6 @@ if __name__ == '__main__':
     parser.add_option("--dynet-autobatch", type="int", default=1)
     parser.add_option("--dynet-mem", type="int", default=10240)
     parser.add_option("--save_epoch", action="store_true", dest="save_epoch", default=False, help='Save each epoch.')
-    parser.add_option("--region", action="store_false", dest="region", default=True, help='Use predicate boolean flag.')
 
     (options, args) = parser.parse_args()
     print 'Using external embedding:', options.external_embedding
