@@ -83,22 +83,13 @@ class SRLLSTM:
         return [concatenate(filter(None, [x_re[i], x_pe[i], x_pos[i]])) for i in xrange(len(x_re))]
 
     def getBilstmFeatures(self, sentence, embed, index, train):
-        x_le, pred_bool = [], []
         self.empty_lemma_embed = inputVector([0] * self.d_l)
-
-        # first extracting embedding features.
-        for i in range(len(sentence)):
-            token = sentence[i]
-            cl = int(self.lemmaCount.get(token.lemma, 0))
-            lemma_drop = train and (random.random() < 1.0 - (cl / (self.alpha + cl)))
-
-            # just have lemma embedding for predicates
-            x_le.append(lookup(self.x_le, int(self.pred_lemmas.get(token.lemma, 0)) if not lemma_drop else 0)) if token.is_pred and i==index else x_le.append(self.empty_lemma_embed)
-            if self.region:
-                pred_bool.append(inputVector([1])) if token.is_pred  and i==index  else pred_bool.append(inputVector([0]))
-            else:
-                pred_bool.append(None)
-
+        x_le = [self.empty_lemma_embed for _ in range(len(sentence))]
+        pred_bool = [inputVector([0]) if self.region else None for _ in range(len(sentence))]
+        cl = int(self.lemmaCount.get(sentence[index].lemma, 0))
+        lemma_drop = train and (random.random() < 1.0 - (cl / (self.alpha + cl)))
+        x_le[index] = lookup(self.x_le, int(self.pred_lemmas.get(sentence[index].lemma, 0)) if not lemma_drop else 0)
+        pred_bool[index] = inputVector([1]) if self.region else None
         seq_input = [concatenate(filter(None, [embed[i], x_le[i], pred_bool[i]])) for i in xrange(len(embed))]
         return self.deep_lstms.transduce(seq_input)
 
