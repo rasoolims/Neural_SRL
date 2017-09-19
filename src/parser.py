@@ -29,6 +29,7 @@ if __name__ == '__main__':
     parser.add_option("--epochs", type="int", dest="epochs", default=30)
     parser.add_option("--outdir", type="string", dest="outdir", default="results")
     parser.add_option("--dynet-autobatch", type="int", default=1)
+    parser.add_option("--dynet-mem", type="int", default=10240)
     parser.add_option("--save_epoch", action="store_true", dest="save_epoch", default=False, help='Save each epoch.')
     parser.add_option("--region", action="store_false", dest="region", default=True, help='Use predicate boolean flag.')
 
