@@ -30,7 +30,6 @@ if __name__ == '__main__':
     parser.add_option("--outdir", type="string", dest="outdir", default="results")
     parser.add_option("--dynet-autobatch", type="int", default=1)
     parser.add_option("--save_epoch", action="store_true", dest="save_epoch", default=False, help='Save each epoch.')
-    parser.add_option("--drop", action="store_true", dest="drop", default=False, help='Use dropout.')
     parser.add_option("--region", action="store_false", dest="region", default=True, help='Use predicate boolean flag.')
 
     (options, args) = parser.parse_args()
