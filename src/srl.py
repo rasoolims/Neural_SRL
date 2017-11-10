@@ -47,13 +47,17 @@ class SRLLSTM:
         self.x_pe.set_updated(False)
         print 'Load external embedding. Vector dimensions', self.edim
 
-        self.inp_dim = self.d_w + self.d_l + self.d_pos + (self.edim if self.external_embedding is not None else 0) #todo+ (1 if self.region else 0)  # 1 for predicate indicator
+        self.inp_dim = self.d_w + self.d_l + self.d_pos + (self.edim if self.external_embedding is not None else 0) + (1 if self.region else 0)  # 1 for predicate indicator
         self.deep_lstms = BiRNNBuilder(self.k, self.inp_dim, 2*self.d_h, self.model, VanillaLSTMBuilder)
         self.x_re = self.model.add_lookup_parameters((len(self.words) + 2, self.d_w))
         self.x_le = self.model.add_lookup_parameters((len(self.pred_lemmas) + 3, self.d_l))
         self.x_pos = self.model.add_lookup_parameters((len(pos)+2, self.d_pos))
         self.u_l = self.model.add_lookup_parameters((len(self.pred_lemmas) + 3, self.d_prime_l))
         self.v_r = self.model.add_lookup_parameters((len(self.roles)+2, self.d_r))
+        self.pred_flag = self.model.add_lookup_parameters((2, 1))
+        self.pred_flag.init_row(0, [0])
+        self.pred_flag.init_row(0, [1])
+        self.pred_flag.set_updated(False)
         self.U = self.model.add_parameters((self.d_h * 4, self.d_r + self.d_prime_l))
         self.empty_lemma_embed = inputVector([0]*self.d_l)
 
@@ -63,9 +67,8 @@ class SRLLSTM:
     def Load(self, filename):
         self.model.load(filename)
 
-    def rnn(self, words, pwords, pos, lemmas):
-
-        inputs = [concatenate([lookup_batch(self.x_re, words[i]), lookup_batch(self.x_pe, pwords[i]),
+    def rnn(self, words, pwords, pos, lemmas, pred_flags):
+        inputs = [concatenate([lookup_batch(self.x_re, words[i]), lookup_batch(self.x_pe, pwords[i]), lookup_batch(self.pred_flag, pred_flags[i]),
                             lookup_batch(self.x_pos, pos[i]), lookup_batch(self.x_le, lemmas[i])]) for i in range(len(words))]
         for fb, bb in self.deep_lstms.builder_layers:
             f, b = fb.initial_state(), bb.initial_state()
@@ -75,8 +78,8 @@ class SRLLSTM:
 
     def buildGraph(self, minibatch, is_train):
         outputs = []
-        words, pwords, pos, lemmas, pred_lemmas, plemmas_index, chars, roles, masks = minibatch
-        bilstms = self.rnn(words, pwords, pos, lemmas)
+        words, pwords, pos, lemmas, pred_lemmas, plemmas_index, chars, roles,lemmas_flags, masks = minibatch
+        bilstms = self.rnn(words, pwords, pos, lemmas, lemmas_flags)
         bilstms = [transpose(reshape(b, (b.dim()[0][0], b.dim()[1]))) for b in bilstms]
         roles, masks = roles.T, masks.T
         for sen in range(roles.shape[0]):

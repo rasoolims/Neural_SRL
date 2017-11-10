@@ -145,6 +145,7 @@ def add_to_minibatch(batch, pred_ids, cur_c_len, cur_len, mini_batches, model):
     lemmas = np.array([np.array(
         [(model.pred_lemmas.get(batch[i][j].lemma, 0) if pred_ids[i][1]==j else model.NO_LEMMA)if j < len(batch[i]) else model.PAD for i in
          range(len(batch))]) for j in range(cur_len)])
+    pred_flags = np.array([np.array([(1 if pred_ids[i][1] == j else 0) if j < len(batch[i]) else 0 for i in range(len(batch))]) for j in range(cur_len)])
     pred_lemmas = np.array([model.pred_lemmas.get(batch[i][pred_ids[i][1]].lemma, 0) for i in range(len(batch))])
     pred_lemmas_index = np.array([pred_ids[i][1] for i in range(len(batch))])
     roles = np.array([np.array(
@@ -155,4 +156,4 @@ def add_to_minibatch(batch, pred_ids, cur_c_len, cur_len, mini_batches, model):
                       c in range(cur_c_len)])
     chars = np.transpose(np.reshape(chars, (len(batch) * cur_len, cur_c_len)))
     masks = np.array([np.array([1 if j < len(batch[i]) and batch[i][j].predicateList[pred_ids[i][0]]!='?' else 0 for i in range(len(batch))]) for j in range(cur_len)])
-    mini_batches.append((words, pwords, pos, lemmas, pred_lemmas, pred_lemmas_index, chars, roles, masks))
+    mini_batches.append((words, pwords, pos, lemmas, pred_lemmas, pred_lemmas_index, chars, roles, pred_flags, masks))
