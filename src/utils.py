@@ -154,5 +154,5 @@ def add_to_minibatch(batch, pred_ids, cur_c_len, cur_len, mini_batches, model):
         batch[i][j].form) else (1 if j == 0 and c == 0 else 0) for i in range(len(batch))] for j in range(cur_len)] for
                       c in range(cur_c_len)])
     chars = np.transpose(np.reshape(chars, (len(batch) * cur_len, cur_c_len)))
-    masks = np.array([np.array([1 if 0 < j < len(batch[i]) and batch[i][j].predicateList[pred_ids[i][0]]!='?' else 0 for i in range(len(batch))]) for j in range(cur_len)])
+    masks = np.array([np.array([1 if j < len(batch[i]) and batch[i][j].predicateList[pred_ids[i][0]]!='?' else 0 for i in range(len(batch))]) for j in range(cur_len)])
     mini_batches.append((words, pwords, pos, lemmas, pred_lemmas, pred_lemmas_index, chars, roles, masks))

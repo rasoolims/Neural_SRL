@@ -86,11 +86,11 @@ class SRLLSTM:
 
             if is_train:
                 for arg_index in range(roles.shape[1]):
-                        gold_role = roles[sen][arg_index]
-                        v_i = bilstms[arg_index][sen]
-                        scores = W * concatenate([v_i, v_p])
-                        err = pickneglogsoftmax(scores, gold_role) * masks[sen][arg_index]
-                        outputs.append(err)
+                    gold_role = roles[sen][arg_index]
+                    v_i = bilstms[arg_index][sen]
+                    scores = W * concatenate([v_i, v_p])
+                    err = pickneglogsoftmax(scores, gold_role) * masks[sen][arg_index]
+                    outputs.append(err)
             else:
                 for arg_index in range(roles.shape[1]):
                     v_i = bilstms[arg_index][sen]
