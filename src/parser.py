@@ -20,7 +20,7 @@ if __name__ == '__main__':
     parser.add_option("--d_r", type="int", dest="d_r", default=128)
     parser.add_option("--d_prime_l", type="int", dest="d_prime_l", default=128)
     parser.add_option("--k", type="int", dest="k", default=4)
-    parser.add_option("--batch", type="int", dest="batch", default=10)
+    parser.add_option("--batch", type="int", dest="batch", default=10000)
     parser.add_option("--alpha", type="float", dest="alpha", default=0.25)
     parser.add_option("--beta2", type="float", dest="beta2", default=0.999)
     parser.add_option("--beta1", type="float", dest="beta1", default=0.9)
@@ -40,16 +40,25 @@ if __name__ == '__main__':
     if options.conll_train:
         print 'Preparing vocab'
         print options
-        words, lemma_count,w2i, pos, semRels, pl2i = utils.vocab(options.conll_train)
+        train_data = list(utils.read_conll(options.conll_train))
+        words, lemmas, pos, roles, chars = utils.vocab(train_data)
         with open(os.path.join(options.outdir, options.params), 'w') as paramsfp:
-            pickle.dump((words,lemma_count,w2i, pos, semRels, pl2i, options), paramsfp)
+            pickle.dump((words, lemmas, pos, roles, chars, options), paramsfp)
         print 'Finished collecting vocab'
 
         print 'Initializing blstm srl:'
-        parser = SRLLSTM(words,lemma_count, pos, semRels, w2i, pl2i, options)
+        parser = SRLLSTM(words, lemmas, pos, roles, chars, options)
+
+        max_len = max([len(d) for d in train_data])
+        min_len = min([len(d) for d in train_data])
+        buckets = [list() for i in range(min_len, max_len)]
+        for d in train_data:
+            buckets[len(d) - min_len - 1].append(d)
+        buckets = [x for x in buckets if x != []]
+
         for epoch in xrange(options.epochs):
             print 'Starting epoch', epoch
-            parser.Train(options.conll_train)
+            parser.Train(utils.get_batches(buckets, parser, True))
             if options.save_epoch:  parser.Save(os.path.join(options.outdir, options.model + str(epoch + 1)))
             if options.conll_dev != '':
                 start = time.time()

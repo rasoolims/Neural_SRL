@@ -1,5 +1,6 @@
 from collections import Counter, defaultdict
-import re, codecs
+import re, codecs, random
+import numpy as np
 
 class ConllStruct:
     def __init__(self, entries, predicates):
@@ -34,13 +35,14 @@ class ConllEntry:
             entry_list.append(p)
         return '\t'.join(entry_list)
 
-def vocab(conll_path):
+def vocab(sentences, min_count=2):
     wordsCount = Counter()
     posCount = Counter()
     semRelCount = Counter()
     lemma_count = Counter()
+    chars = set()
 
-    for sentence in read_conll(conll_path):
+    for sentence in sentences:
         wordsCount.update([node.norm for node in sentence.entries])
         posCount.update([node.pos for node in sentence.entries])
         for node in sentence.entries:
@@ -51,9 +53,19 @@ def vocab(conll_path):
             for pred in node.predicateList.values():
                 if pred!='?':
                     semRelCount.update([pred])
-    return (wordsCount, lemma_count, {w: i for i, w in enumerate(wordsCount)},
-            {p: i for i, p in enumerate(posCount)}, semRelCount.keys(),
-            {l: i for i, l in enumerate(lemma_count)})
+            for c in list(node.form):
+                    chars.add(c.lower())
+
+    words = set()
+    for w in wordsCount.keys():
+        if wordsCount[w] >= min_count:
+            words.add(w)
+    lemmas = set()
+    for l in lemma_count.keys():
+        if lemma_count[l] >= min_count:
+            lemmas.add(l)
+    return (list(words), list(lemmas),
+            list(posCount), list(semRelCount.keys()), list(chars))
 
 def read_conll(fh):
     sentences = codecs.open(fh, 'r').read().strip().split('\n\n')
@@ -92,3 +104,55 @@ def write_conll(fn, conll_structs):
 numberRegex = re.compile("[0-9]+|[0-9]+\\.[0-9]+|[0-9]+[0-9,]+");
 def normalize(word):
     return 'NUM' if numberRegex.match(word) else word.lower()
+
+def get_batches(buckets, model, is_train):
+    d_copy = [buckets[i][:] for i in range(len(buckets))]
+    if is_train:
+        for dc in d_copy:
+            random.shuffle(dc)
+    mini_batches = []
+    batch, pred_ids, cur_len, cur_c_len = [], [], 0, 0
+    for dc in d_copy:
+        for d in dc:
+            if (is_train and len(d)<=100) or not is_train:
+                for p, predicate in enumerate(d.predicates):
+                    batch.append(d.entries)
+                    pred_ids.append([p,predicate])
+                    cur_c_len = max(cur_c_len, max([len(w.norm) for w in d.entries]))
+                    cur_len = max(cur_len, len(d))
+
+            if cur_len * len(batch) >= model.options.batch:
+                add_to_minibatch(batch, pred_ids, cur_c_len, cur_len, mini_batches, model)
+                batch, pred_ids, cur_len, cur_c_len = [], [], 0, 0
+
+    if len(batch)>0 and not is_train:
+        add_to_minibatch(batch, pred_ids, cur_c_len, cur_len, mini_batches, model)
+    if is_train:
+        random.shuffle(mini_batches)
+    return mini_batches
+
+
+def add_to_minibatch(batch, pred_ids, cur_c_len, cur_len, mini_batches, model):
+    words = np.array([np.array(
+        [model.words.get(batch[i][j].norm, 0) if j < len(batch[i]) else model.PAD for i in
+         range(len(batch))]) for j in range(cur_len)])
+    pwords = np.array([np.array(
+        [model.x_pe_dict.get(batch[i][j].norm, 0) if j < len(batch[i]) else model.PAD for i in
+         range(len(batch))]) for j in range(cur_len)])
+    pos = np.array([np.array(
+        [model.pos.get(batch[i][j].pos, 0) if j < len(batch[i]) else model.PAD for i in
+         range(len(batch))]) for j in range(cur_len)])
+    lemmas = np.array([np.array(
+        [(model.pred_lemmas.get(batch[i][j].lemma, 0) if pred_ids[i][1]==j else model.NO_LEMMA)if j < len(batch[i]) else model.PAD for i in
+         range(len(batch))]) for j in range(cur_len)])
+    pred_lemmas = np.array([model.pred_lemmas.get(batch[i][pred_ids[i][1]].lemma, 0) for i in range(len(batch))])
+    pred_lemmas_index = np.array([pred_ids[i][1] for i in range(len(batch))])
+    roles = np.array([np.array(
+        [model.roles.get(batch[i][j].predicateList[pred_ids[i][0]], 0) if j < len(batch[i]) else model.PAD for i in
+         range(len(batch))]) for j in range(cur_len)])
+    chars = np.array([[[model.chars.get(batch[i][j].form[c].lower(), 0) if 0 < j < len(batch[i]) and c < len(
+        batch[i][j].form) else (1 if j == 0 and c == 0 else 0) for i in range(len(batch))] for j in range(cur_len)] for
+                      c in range(cur_c_len)])
+    chars = np.transpose(np.reshape(chars, (len(batch) * cur_len, cur_c_len)))
+    masks = np.array([np.array([1 if 0 < j < len(batch[i]) and batch[i][j].predicateList[pred_ids[i][0]]!='?' else 0 for i in range(len(batch))]) for j in range(cur_len)])
+    mini_batches.append((words, pwords, pos, lemmas, pred_lemmas, pred_lemmas_index, chars, roles, masks))
