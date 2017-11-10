@@ -84,19 +84,16 @@ class SRLLSTM:
             W = transpose(concatenate_cols(
                 [rectify(self.U.expr() * (concatenate([u_l, self.v_r[role]]))) for role in xrange(len(self.roles))]))
 
-            if is_train:
-                for arg_index in range(roles.shape[1]):
-                    gold_role = roles[sen][arg_index]
+            for arg_index in range(roles.shape[1]):
+                if masks[sen][arg_index] != 0:
                     v_i = bilstms[arg_index][sen]
                     scores = W * concatenate([v_i, v_p])
-                    err = pickneglogsoftmax(scores, gold_role) * masks[sen][arg_index]
-                    outputs.append(err)
-            else:
-                for arg_index in range(roles.shape[1]):
-                    v_i = bilstms[arg_index][sen]
-                    scores = W * concatenate([v_i, v_p])
-                    outputs.append(scores)
-
+                    if is_train:
+                        gold_role = roles[sen][arg_index]
+                        err = pickneglogsoftmax(scores, gold_role) * masks[sen][arg_index]
+                        outputs.append(err)
+                    else:
+                        outputs.append(scores)
         return outputs
 
     def decode(self, minibatches):
@@ -118,9 +115,8 @@ class SRLLSTM:
             renew_cg()
             self.x_le.init_row(self.NO_LEMMA, [0]*self.d_l)
             renew_cg()
-            if (b+1)%10==0:
-                print 'loss:', loss/(b+1), 'time:', time.time() - start, 'progress',round(100*float(b+1)/len(mini_batches),2),'%'
-                loss, start = 0, time.time()
+            print 'loss:', loss/(b+1), 'time:', time.time() - start, 'progress',round(100*float(b+1)/len(mini_batches),2),'%'
+            loss, start = 0, time.time()
             errs, sen_num = [], 0
             iters+=1
 
@@ -132,15 +128,10 @@ class SRLLSTM:
         minibatches = get_batches(dev_buckets, self, False)
         outputs = self.decode(minibatches).npvalue()
         results = [self.iroles[np.argmax(outputs[i])] for i in range(len(outputs))]
-        indices = [0]
-        for batch in minibatches:
-            w,s = batch[0].shape[0], batch[1].shape[1]
-            for i in range(s):
-                indices.append(indices[-1]+w)
-
+        offset = 0
         for iSentence, sentence in enumerate(dev_data):
             for p in xrange(len(sentence.predicates)):
-                offset = indices.pop(0)
                 for arg_index in xrange(len(sentence.entries)):
-                    sentence.entries[arg_index].predicateList[p] = results[offset+arg_index]
+                    sentence.entries[arg_index].predicateList[p] = results[offset]
+                    offset+=1
             yield sentence
