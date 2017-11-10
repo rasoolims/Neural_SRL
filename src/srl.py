@@ -103,6 +103,7 @@ class SRLLSTM:
         return transpose(concatenate_cols(outputs))
 
     def Train(self, mini_batches):
+        print 'Start time', time.ctime()
         start = time.time()
         errs,loss,iters,sen_num = [],0,0,0
         for b, mini_batch in enumerate(mini_batches):
