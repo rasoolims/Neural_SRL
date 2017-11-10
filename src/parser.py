@@ -69,10 +69,10 @@ if __name__ == '__main__':
         parser.Save(os.path.join(options.outdir, options.model))
 
     if options.input and options.output:
-        with open(options.params, 'r') as paramsfp:
-            words,lemma_count,w2i, pos, semRels, pl2i, stored_opt = pickle.load(paramsfp)
+        with open(options.outdir+'/'+options.params, 'r') as paramsfp:
+            words, lemmas, pos, roles, chars, stored_opt = pickle.load(paramsfp)
         stored_opt.external_embedding = options.external_embedding
-        parser = SRLLSTM(words,lemma_count,pos, semRels, w2i, pl2i, stored_opt)
+        parser = SRLLSTM(words, lemmas, pos, roles, chars, stored_opt)
         parser.Load(options.model)
         ts = time.time()
         pred = list(parser.Predict(options.input))
