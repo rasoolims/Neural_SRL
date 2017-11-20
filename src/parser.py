@@ -32,6 +32,8 @@ if __name__ == '__main__':
     parser.add_option("--dynet-mem", type="int", default=10240)
     parser.add_option("--save_epoch", action="store_true", dest="save_epoch", default=False, help='Save each epoch.')
     parser.add_option("--region", action="store_false", dest="region", default=True, help='Use predicate boolean flag.')
+    parser.add_option("--dynet-gpu", action="store_true", dest="--dynet-gpu", default=False, help='Use GPU instead of cpu.')
+
 
     (options, args) = parser.parse_args()
     print 'Using external embedding:', options.external_embedding
