@@ -102,8 +102,9 @@ class SRLLSTM:
     def decode(self, minibatches):
         outputs = [list() for _ in range(len(minibatches))]
         for b, batch in enumerate(minibatches):
-            outputs[b] = concatenate_cols(self.buildGraph(batch, False))
-        return transpose(concatenate_cols(outputs))
+            outputs[b] = concatenate_cols(self.buildGraph(batch, False)).npvalue()
+            renew_cg()
+        return np.concatenate(np.array(outputs), axis=1).T
 
     def Train(self, mini_batches):
         print 'Start time', time.ctime()
@@ -130,8 +131,7 @@ class SRLLSTM:
         for d in dev_data:
             dev_buckets[0].append(d)
         minibatches = get_batches(dev_buckets, self, False)
-        outputs = self.decode(minibatches).npvalue()
-        renew_cg()
+        outputs = self.decode(minibatches)
         results = [self.iroles[np.argmax(outputs[i])] for i in range(len(outputs))]
         offset = 0
         for iSentence, sentence in enumerate(dev_data):
