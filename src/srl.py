@@ -105,7 +105,7 @@ class SRLLSTM:
             outputs[b] = concatenate_cols(self.buildGraph(batch, False)).npvalue()
             renew_cg()
         outputs = np.concatenate(outputs, axis=1)
-        return outputs.shape
+        return outputs.T
 
     def Train(self, mini_batches):
         print 'Start time', time.ctime()
