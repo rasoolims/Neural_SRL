@@ -65,7 +65,7 @@ class SRLLSTM:
         self.model.save(filename)
 
     def Load(self, filename):
-        self.model.load(filename)
+        self.model.populate(filename)
 
     def rnn(self, words, pwords, pos, lemmas, pred_flags):
         inputs = [concatenate([lookup_batch(self.x_re, words[i]), lookup_batch(self.x_pe, pwords[i]), lookup_batch(self.pred_flag, pred_flags[i]),

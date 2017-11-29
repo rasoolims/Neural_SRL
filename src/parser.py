@@ -80,11 +80,11 @@ if __name__ == '__main__':
         print 'Best epoch: ' + str(best_epoch)
 
     if options.input and options.output:
-        with open(options.outdir+'/'+options.params, 'r') as paramsfp:
+        with open(os.path.join(options.outdir, options.params), 'r') as paramsfp:
             words, lemmas, pos, roles, chars, stored_opt = pickle.load(paramsfp)
         stored_opt.external_embedding = options.external_embedding
         parser = SRLLSTM(words, lemmas, pos, roles, chars, stored_opt)
-        parser.Load(options.model)
+        parser.Load(os.path.join(options.outdir, options.model))
         ts = time.time()
         pred = list(parser.Predict(options.input))
         te = time.time()
