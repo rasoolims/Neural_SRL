@@ -157,3 +157,19 @@ def add_to_minibatch(batch, pred_ids, cur_c_len, cur_len, mini_batches, model):
     chars = np.transpose(np.reshape(chars, (len(batch) * cur_len, cur_c_len)))
     masks = np.array([np.array([1 if j < len(batch[i]) and batch[i][j].predicateList[pred_ids[i][0]]!='?' else 0 for i in range(len(batch))]) for j in range(cur_len)])
     mini_batches.append((words, pwords, pos, lemmas, pred_lemmas, pred_lemmas_index, chars, roles, pred_flags, masks))
+
+
+def get_scores(fp):
+    labeled_f = 0
+    unlabeled_f = 0
+    line_counter =0
+    with codecs.open(fp, 'r') as fr:
+        for line in fr:
+            line_counter+=1
+            if line_counter == 10:
+                spl = line.strip().split(' ')
+                labeled_f= spl[len(spl)-1]
+            if line_counter==13:
+                spl = line.strip().split(' ')
+                unlabeled_f = spl[len(spl) - 1]
+    return (labeled_f, unlabeled_f)
