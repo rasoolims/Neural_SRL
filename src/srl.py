@@ -102,9 +102,17 @@ class SRLLSTM:
     def decode(self, minibatches):
         outputs = [list() for _ in range(len(minibatches))]
         for b, batch in enumerate(minibatches):
-            outputs[b] = concatenate_cols(self.buildGraph(batch, False)).npvalue()
+            x = concatenate_cols(self.buildGraph(batch, False))
+            outputs[b] = x.npvalue()
+            print x.dim(), outputs[b].shape
             renew_cg()
-        return np.concatenate(np.array(outputs), axis=1).T
+        print '->',len(outputs)
+        y = np.concatenate(outputs, axis=1)
+        print y.shape
+        z = y.T
+        print z.shape
+        return z
+        #return transpose(concatenate_cols(outputs))
 
     def Train(self, mini_batches):
         print 'Start time', time.ctime()
