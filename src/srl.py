@@ -131,6 +131,7 @@ class SRLLSTM:
             dev_buckets[0].append(d)
         minibatches = get_batches(dev_buckets, self, False)
         outputs = self.decode(minibatches).npvalue()
+        renew_cg()
         results = [self.iroles[np.argmax(outputs[i])] for i in range(len(outputs))]
         offset = 0
         for iSentence, sentence in enumerate(dev_data):
