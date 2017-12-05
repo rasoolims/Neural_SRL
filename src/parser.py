@@ -61,7 +61,8 @@ if __name__ == '__main__':
 
         for epoch in xrange(options.epochs):
             print 'Starting epoch', epoch
-            parser.Train(utils.get_batches(buckets, parser, True))
+            parser.Train(utils.get_batches(buckets, parser, True), epoch, best_f_score, options)
+            '''
             if options.conll_dev != '':
                 start = time.time()
                 utils.write_conll(os.path.join(options.outdir, options.model) + str(epoch + 1) + '.txt',
@@ -76,8 +77,10 @@ if __name__ == '__main__':
                     parser.Save(os.path.join(options.outdir, options.model))
                     best_f_score = float(labeled_f)
                     best_epoch = epoch
+            
 
         print 'Best epoch: ' + str(best_epoch)
+        '''
 
     if options.input and options.output:
         with open(os.path.join(options.outdir, options.params), 'r') as paramsfp:
