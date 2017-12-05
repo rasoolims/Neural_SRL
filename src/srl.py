@@ -132,6 +132,7 @@ class SRLLSTM:
 
             if (b+1)%part_size==0:
                 part+=1
+
                 if dev_path != '':
                     start = time.time()
                     write_conll(os.path.join(options.outdir, options.model) + str(epoch + 1) + "_" + str(part)+ '.txt',
@@ -147,6 +148,9 @@ class SRLLSTM:
                     if float(labeled_f) > best_f_score:
                         self.Save(os.path.join(options.outdir, options.model))
                         best_f_score = float(labeled_f)
+                        best_part = part
+
+        print 'best part on this epoch: '+ best_part
         return best_f_score
 
 
