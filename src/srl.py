@@ -152,7 +152,7 @@ class SRLLSTM:
                         best_f_score = float(labeled_f)
                         best_part = part
 
-        print 'best part on this epoch: '+ best_part
+        print 'best part on this epoch: '+ str(best_part)
         return best_f_score
 
 
