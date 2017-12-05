@@ -115,6 +115,8 @@ class SRLLSTM:
 
         part_size = len(mini_batches)/5
         part = 0
+        best_part = 0
+
         for b, mini_batch in enumerate(mini_batches):
             e = self.buildGraph(mini_batch, True)
             errs+= e
@@ -142,7 +144,7 @@ class SRLLSTM:
 
                     labeled_f, unlabeled_f = get_scores(
                         os.path.join(options.outdir, options.model) + str(epoch + 1) + "_" + str(part) + '.eval')
-                    print 'epoch: ' + str(epoch) + 'part: '+ str(part) + '-- labeled F1: ' + str(labeled_f) + ' Unlabaled F: ' + str(
+                    print 'epoch: ' + str(epoch) + ' part: '+ str(part) + '-- labeled F1: ' + str(labeled_f) + ' Unlabaled F: ' + str(
                         unlabeled_f)
 
                     if float(labeled_f) > best_f_score:
