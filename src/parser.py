@@ -61,7 +61,10 @@ if __name__ == '__main__':
 
         for epoch in xrange(options.epochs):
             print 'Starting epoch', epoch
-            parser.Train(utils.get_batches(buckets, parser, True), epoch, best_f_score, options)
+            print 'best F-score before starting the epoch: '+ str(best_f_score)
+            best_f_score = parser.Train(utils.get_batches(buckets, parser, True), epoch, best_f_score, options)
+            print 'best F-score after finishing the epoch: '+ str(best_f_score)
+
             '''
             if options.conll_dev != '':
                 start = time.time()
