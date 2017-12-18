@@ -105,6 +105,7 @@ class SRLLSTM:
             outputs[b] = concatenate_cols(self.buildGraph(batch, False)).npvalue()
             renew_cg()
 
+        print 'minibatch length: '+ str(len(minibatches))
         print 'outputs length: '+str(len(outputs))
         outputs = np.concatenate(outputs, axis=1)
         return outputs.T
