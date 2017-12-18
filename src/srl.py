@@ -104,7 +104,8 @@ class SRLLSTM:
         for b, batch in enumerate(minibatches):
             outputs[b] = concatenate_cols(self.buildGraph(batch, False)).npvalue()
             renew_cg()
-        outputs = np.concatenate(outputs, axis=1)
+        if not len(outputs)==0:
+            outputs = np.concatenate(outputs, axis=1)
         return outputs.T
 
     def Train(self, mini_batches, epoch, best_f_score, options):
