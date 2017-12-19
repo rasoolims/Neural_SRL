@@ -149,8 +149,8 @@ def add_to_minibatch(batch, pred_ids, cur_c_len, cur_len, mini_batches, model):
     pred_lemmas = np.array([model.pred_lemmas.get(batch[i][pred_ids[i][1]].lemma, 0) for i in range(len(batch))])
     pred_lemmas_index = np.array([pred_ids[i][1] for i in range(len(batch))])
     roles = np.array([np.array(
-        [model.roles.get(batch[i][j].predicateList[pred_ids[i][0]], 0) if j < len(batch[i]) else model.PAD for i in
-         range(len(batch))]) for j in range(cur_len)])
+        [model.roles.get(batch[i][j].predicateList[pred_ids[i][0]], 0) if j < len(pred_ids[i]) else model.PAD for i in
+         range(len(pred_ids))]) for j in range(cur_len)])
     chars = np.array([[[model.chars.get(batch[i][j].form[c].lower(), 0) if 0 < j < len(batch[i]) and c < len(
         batch[i][j].form) else (1 if j == 0 and c == 0 else 0) for i in range(len(batch))] for j in range(cur_len)] for
                       c in range(cur_c_len)])
