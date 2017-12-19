@@ -1,8 +1,8 @@
 from dynet import *
-from utils import read_conll, get_batches
+from utils import read_conll, get_batches, get_scores, write_conll
 import time, random, os,math
 import numpy as np
-from collections import  defaultdict
+
 
 class SRLLSTM:
     def __init__(self, words, lemmas, pos, roles, chars, options):
@@ -65,7 +65,7 @@ class SRLLSTM:
         self.model.save(filename)
 
     def Load(self, filename):
-        self.model.load(filename)
+        self.model.populate(filename)
 
     def rnn(self, words, pwords, pos, lemmas, pred_flags):
         inputs = [concatenate([lookup_batch(self.x_re, words[i]), lookup_batch(self.x_pe, pwords[i]), lookup_batch(self.pred_flag, pred_flags[i]),
@@ -104,13 +104,22 @@ class SRLLSTM:
         for b, batch in enumerate(minibatches):
             outputs[b] = concatenate_cols(self.buildGraph(batch, False)).npvalue()
             renew_cg()
+
+        print 'minibatch length: '+ str(len(minibatches))
+        print 'outputs length: '+str(len(outputs))
         outputs = np.concatenate(outputs, axis=1)
         return outputs.T
 
-    def Train(self, mini_batches):
+    def Train(self, mini_batches, epoch, best_f_score, options):
         print 'Start time', time.ctime()
         start = time.time()
         errs,loss,iters,sen_num = [],0,0,0
+        dev_path = options.conll_dev
+
+        part_size = len(mini_batches)/5
+        part = 0
+        best_part = 0
+
         for b, mini_batch in enumerate(mini_batches):
             e = self.buildGraph(mini_batch, True)
             errs+= e
@@ -125,6 +134,30 @@ class SRLLSTM:
             loss, start = 0, time.time()
             errs, sen_num = [], 0
             iters+=1
+
+            if (b+1)%part_size==0:
+                part+=1
+
+                if dev_path != '':
+                    start = time.time()
+                    write_conll(os.path.join(options.outdir, options.model) + str(epoch + 1) + "_" + str(part)+ '.txt',
+                                      self.Predict(dev_path))
+                    os.system('perl src/utils/eval.pl -g ' + dev_path + ' -s ' + os.path.join(options.outdir, options.model) + str(epoch + 1) + "_" + str(part)+ '.txt' + ' > ' + os.path.join(options.outdir, options.model) + str(epoch + 1) + "_" + str(part) + '.eval')
+                    print 'Finished predicting dev on part '+ str(part)+ '; time:', time.time() - start
+
+                    labeled_f, unlabeled_f = get_scores(
+                        os.path.join(options.outdir, options.model) + str(epoch + 1) + "_" + str(part) + '.eval')
+                    print 'epoch: ' + str(epoch) + ' part: '+ str(part) + '-- labeled F1: ' + str(labeled_f) + ' Unlabaled F: ' + str(
+                        unlabeled_f)
+
+                    if float(labeled_f) > best_f_score:
+                        self.Save(os.path.join(options.outdir, options.model))
+                        best_f_score = float(labeled_f)
+                        best_part = part
+
+        print 'best part on this epoch: '+ str(best_part)
+        return best_f_score
+
 
     def Predict(self, conll_path):
         dev_buckets = [list()]
