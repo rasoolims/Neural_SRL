@@ -148,6 +148,7 @@ def add_to_minibatch(batch, pred_ids, cur_c_len, cur_len, mini_batches, model):
     pred_flags = np.array([np.array([(1 if pred_ids[i][1] == j else 0) if j < len(batch[i]) else 0 for i in range(len(batch))]) for j in range(cur_len)])
     pred_lemmas = np.array([model.pred_lemmas.get(batch[i][pred_ids[i][1]].lemma, 0) for i in range(len(batch))])
     pred_lemmas_index = np.array([pred_ids[i][1] for i in range(len(batch))])
+    print pred_ids
     for j in range(cur_len):
         for i in range(len(pred_ids)):
             print j < len(pred_ids[i])
