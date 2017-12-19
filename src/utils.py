@@ -152,6 +152,10 @@ def add_to_minibatch(batch, pred_ids, cur_c_len, cur_len, mini_batches, model):
     for j in range(cur_len):
         for i in range(len(pred_ids)):
             print j < len(pred_ids[i])
+            print batch[i][j]
+            print batch[i][j].predicateList
+            print batch[i][j].predicateList[pred_ids[i][0]]
+            print model.roles.get(batch[i][j].predicateList[pred_ids[i][0]], 0)
             model.roles.get(batch[i][j].predicateList[pred_ids[i][0]], 0) if j < len(pred_ids[i]) else model.PAD
 
     roles = np.array([np.array(
