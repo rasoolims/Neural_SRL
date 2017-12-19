@@ -164,7 +164,9 @@ class SRLLSTM:
         dev_data = list(read_conll(conll_path))
         for d in dev_data:
             dev_buckets[0].append(d)
+        print 'loaded dev buckets'
         minibatches = get_batches(dev_buckets, self, False)
+        print 'loaded minibatches'
         outputs = self.decode(minibatches)
         results = [self.iroles[np.argmax(outputs[i])] for i in range(len(outputs))]
         offset = 0

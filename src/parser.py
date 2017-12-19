@@ -71,6 +71,7 @@ if __name__ == '__main__':
         stored_opt.external_embedding = options.external_embedding
         parser = SRLLSTM(words, lemmas, pos, roles, chars, stored_opt)
         parser.Load(os.path.join(options.outdir, options.model))
+        print 'loaded the model'
         ts = time.time()
         pred = list(parser.Predict(options.input))
         te = time.time()
