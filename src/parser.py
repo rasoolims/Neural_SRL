@@ -65,26 +65,6 @@ if __name__ == '__main__':
             best_f_score = parser.Train(utils.get_batches(buckets, parser, True), epoch, best_f_score, options)
             print 'best F-score after finishing the epoch: '+ str(best_f_score)
 
-            '''
-            if options.conll_dev != '':
-                start = time.time()
-                utils.write_conll(os.path.join(options.outdir, options.model) + str(epoch + 1) + '.txt',
-                                  parser.Predict(options.conll_dev))
-                os.system('perl src/utils/eval.pl -g ' + options.conll_dev + ' -s ' + os.path.join(options.outdir,options.model) + str(epoch + 1) + '.txt' + ' > ' + os.path.join(options.outdir, options.model) + str(epoch + 1) + '.eval')
-                print 'Finished predicting dev; time:', time.time() - start
-
-                labeled_f, unlabeled_f = utils.get_scores(os.path.join(options.outdir, options.model) + str(epoch + 1) + '.eval')
-                print 'epoch: ' + str(epoch) + '-- labeled F1: ' + str(labeled_f) + ' Unlabaled F: ' + str(unlabeled_f)
-
-                if float(labeled_f) > best_f_score:
-                    parser.Save(os.path.join(options.outdir, options.model))
-                    best_f_score = float(labeled_f)
-                    best_epoch = epoch
-            
-
-        print 'Best epoch: ' + str(best_epoch)
-        '''
-
     if options.input and options.output:
         with open(os.path.join(options.outdir, options.params), 'r') as paramsfp:
             words, lemmas, pos, roles, chars, stored_opt = pickle.load(paramsfp)
